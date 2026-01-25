@@ -1,6 +1,6 @@
 # TEMPORAL DEBT
 
-![Temporal Debt Banner](assets/images/temporal_debt_banner.png)
+![Temporal Debt Banner](assets/images/temporal-debt-banner.png)
 > *Time is a loan you cannot afford.*
 
 A puzzle-adventure game where the player can borrow time from the future to solve the present — but every second borrowed must be repaid later with interest.
