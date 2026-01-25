@@ -1,14 +1,13 @@
 # TEMPORAL DEBT
 
-![Temporal Debt Banner](https://github.com/user-attachments/assets/f3c6e3f3-9b1e-4b6f-8e0a-9e3f3b4f5a1f)
-
+![Temporal Debt Banner](assets/images/temporal_debt_banner.png)
 > *Time is a loan you cannot afford.*
 
 A puzzle-adventure game where the player can borrow time from the future to solve the present — but every second borrowed must be repaid later with interest.
 
 ## 📸 Gameplay Screenshot
 
-![Temporal Debt Gameplay](https://github.com/user-attachments/assets/b8c7d4e9-2f3a-4e5b-9c1d-8e6f7a2b3c4d)
+![Temporal Debt Gameplay](assets/images/.png)
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Pygame](https://img.shields.io/badge/Pygame-2.5+-green.svg)
@@ -167,7 +166,7 @@ The debt system mirrors real-world lending:
 
 Anyone with a link can play your game in their browser!
 
-## ���📜 License
+## 📜 License
 
 MIT License - Feel free to use, modify, and distribute.
 
