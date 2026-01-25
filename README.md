@@ -5,10 +5,6 @@
 
 A puzzle-adventure game where the player can borrow time from the future to solve the present — but every second borrowed must be repaid later with interest.
 
-## 📸 Gameplay Screenshot
-
-![Temporal Debt Gameplay](assets/images/.png)
-
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Pygame](https://img.shields.io/badge/Pygame-2.5+-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
