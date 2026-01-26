@@ -1,0 +1,24 @@
+[MASTER]
+# Extension packages to check for additional members
+extension-pkg-whitelist=pygame
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable=
+    fixme,                    # TODO, FIXME comments are documentation
+    broad-except,             # Catching Exception is sometimes necessary
+    global-statement,         # Global singleton pattern is acceptable
+    protected-access,         # Internal API access where needed
+    unused-argument,          # Callback signatures require specific parameters
+    no-member,                # Pygame has dynamic members loaded at runtime
+    c-extension-no-member     # C extension members not visible to static analysis
+
+[TYPECHECK]
+# List of members which are set dynamically and miss from static analysis
+generated-members=pygame.*,pygame.locals.*
+
+# Ignore missing members on modules
+ignored-modules=pygame,pygame.locals
+
+# Ignore classes for which member attributes should not be checked
+ignored-classes=pygame.*
