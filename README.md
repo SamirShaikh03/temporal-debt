@@ -1,36 +1,5 @@
 # TEMPORAL DEBT
 
-*Time is a loan you cannot afford.*
-
-A puzzle‑adventure about borrowing time from the future to solve the present — every second borrowed must be repaid with interest. Plan carefully, manage your Temporal Debt, and survive the consequences.
-
-![Temporal Debt Banner](assets/images/temporal-debt-banner.png)
-
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg) ![Pygame](https://img.shields.io/badge/Pygame-2.5+-green.svg) ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-
-Key features:
-- Time Freeze mechanic with strategic cost/benefit tradeoffs
-- Temporal Echoes, Time Anchors, Debt Sinks, and escalating Debt Tiers
-- Clean, modular codebase suitable for extension and modding
-
-Quick start:
-```bash
-# clone and enter project
-git clone <repo-url> temporal_debt
-cd temporal_debt
-
-# install and run
-pip install -r requirements.txt
-python main.py
-```
-
-Docs & design:
-- docs/GAME_DESIGN_DOCUMENT.md — design notes and mechanics
-- docs/TECHNICAL_ARCHITECTURE.md — architecture and systems
-
-License: MIT — see LICENSE.
-
-
 ![Temporal Debt Banner](assets/images/temporal-debt-banner.png)
 > *Time is a loan you cannot afford.*
 

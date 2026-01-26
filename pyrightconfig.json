@@ -1,0 +1,24 @@
+{
+  "include": [
+    "src",
+    "main.py"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    ".venv"
+  ],
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportGeneralTypeIssues": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportOptionalSubscript": "none",
+  "reportPrivateImportUsage": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportAttributeAccessIssue": "none",
+  "stubPath": "typings",
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows"
+}

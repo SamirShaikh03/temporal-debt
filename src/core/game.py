@@ -242,24 +242,25 @@ class Game:
             self.state = GameState.PLAYING
     
     def run(self) -> None:
-        """Main game loop."""
-        while self.running:
-            # Calculate delta time
-            dt = self.clock.tick(Settings.FPS) / 1000.0
-            dt = min(dt, 0.1)  # Cap dt to prevent spiral of death
-            
-            # Handle events
-            self._handle_events()
-            
-            # Update based on state
-            self._update(dt)
-            
-            # Render
-            self._render()
-            
-            # Update display
-            pygame.display.flip()
+        """Main game loop - single frame execution for web compatibility."""
+        # Calculate delta time
+        dt = self.clock.tick(Settings.FPS) / 1000.0
+        dt = min(dt, 0.1)  # Cap dt to prevent spiral of death
         
+        # Handle events
+        self._handle_events()
+        
+        # Update based on state
+        self._update(dt)
+        
+        # Render
+        self._render()
+        
+        # Update display
+        pygame.display.flip()
+    
+    def cleanup(self) -> None:
+        """Cleanup when game ends."""
         pygame.quit()
     
     def _handle_events(self) -> None:
