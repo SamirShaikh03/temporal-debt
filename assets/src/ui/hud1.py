@@ -16,10 +16,8 @@ Design Philosophy:
 import pygame
 import math
 
-
 from ..core.settings import Settings, COLORS
-from ..core.utils import lerp, get_font
-
+from ..core.utils import lerp
 
 class HUD:
     """
@@ -36,9 +34,9 @@ class HUD:
         """Initialize the HUD."""
         # Fonts
         pygame.font.init()
-        self.font_large = get_font('Arial', 32, bold=True)
-        self.font_medium = get_font('Arial', 24)
-        self.font_small = get_font('Arial', 18)
+        self.font_large = pygame.font.SysFont('Arial', 32, bold=True)
+        self.font_medium = pygame.font.SysFont('Arial', 24)
+        self.font_small = pygame.font.SysFont('Arial', 18)
         
         # State references (set externally)
         self._debt_manager = None
