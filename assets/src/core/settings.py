@@ -193,6 +193,48 @@ class Settings:
     VIGNETTE_INTENSITY = 0.3
     
     # ===================
+    # V2.0 FEATURE SETTINGS
+    # ===================
+    
+    # Temporal Momentum System
+    MOMENTUM_MAX = 10.0
+    MOMENTUM_BUILD_RATE = 1.0  # Points per second
+    MOMENTUM_DRAIN_RATE = 2.0  # Points per second during freeze
+    MOMENTUM_DEBT_REDUCTION = 0.05  # 5% per point
+    
+    # Resonance System
+    RESONANCE_MIN_INTERVAL = 15.0
+    RESONANCE_MAX_INTERVAL = 20.0
+    RESONANCE_WARNING_DURATION = 2.0
+    RESONANCE_WAVE_DURATION = 1.5
+    RESONANCE_FROZEN_PENALTY = 3.0
+    RESONANCE_MOVING_BONUS = 0.5
+    
+    # Chrono-Clone System
+    CLONE_RECORDING_DURATION = 5.0
+    CLONE_COOLDOWN = 8.0
+    
+    # Time Reversal System
+    REVERSAL_COST = 8.0
+    REVERSAL_DURATION = 3.0
+    REVERSAL_USES_PER_LIFE = 1
+    
+    # Temporal Fragments
+    FRAGMENT_DEBT_REDUCTION = 1.5
+    FRAGMENTS_FOR_BURST = 5
+    BURST_DURATION = 2.0
+    BURST_TIME_SCALE = 0.3
+    
+    # Time Dilation Zones
+    SAFE_ZONE_MULTIPLIER = 0.75
+    DANGER_ZONE_MULTIPLIER = 2.0
+    
+    # Debt Transfer Pods
+    POD_MAX_DEBT = 5.0
+    POD_DEPOSIT_RATE = 2.0
+    POD_RELEASE_RADIUS = 150.0
+    
+    # ===================
     # AUDIO HOOKS (for future implementation)
     # ===================
     

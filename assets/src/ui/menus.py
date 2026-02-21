@@ -582,16 +582,20 @@ class ControlsScreen(BaseMenu):
             ('SPACE (hold)', 'Freeze time - but accumulates debt!'),
             ('Q', 'Place a Time Anchor checkpoint'),
             ('E', 'Recall to your nearest anchor (costs 2s debt)'),
+            ('C', 'Spawn Chrono-Clone (replays your path)'),
+            ('R', 'Time Rewind (limited uses, costs debt)'),
+            ('B', 'Fragment Burst (5 fragments = slow-mo)'),
+            ('F (hold)', 'Interact with Debt Transfer Pods'),
             ('ESC', 'Pause the game'),
-            ('TAB', 'Toggle on-screen controls hint'),
         ]
         
         # Tips section
         self.tips = [
             "Higher debt = faster, more dangerous world",
             "Temporal Hunters only move when time is frozen!",
-            "Debt Shadows spawn when your debt gets too high",
-            "Reach the green EXIT zone to complete each level",
+            "Stay moving to build Momentum (reduces debt rate)",
+            "Chrono-Clones distract enemies and trigger plates",
+            "Collect 5 Temporal Fragments for slow-mo burst!",
         ]
     
     def handle_input(self, event: pygame.event.Event) -> Optional[str]:

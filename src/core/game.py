@@ -9,6 +9,13 @@ Design Philosophy:
 - Clean separation of concerns
 - State machine for game flow
 - Fixed timestep for consistent physics
+
+TEMPORAL DEBT 2.0 - Added new systems:
+- Temporal Momentum System
+- Resonance Events
+- Chrono-Clone System
+- Time Reversal System
+- Fragment Collection
 """
 
 import pygame
@@ -23,6 +30,13 @@ from ..systems.time_engine import TimeEngine
 from ..systems.debt_manager import DebtManager
 from ..systems.echo_system import EchoSystem
 from ..systems.anchor_system import AnchorSystem
+
+# V2.0 Systems
+from ..systems.momentum_system import MomentumSystem
+from ..systems.resonance_system import ResonanceSystem
+from ..systems.chrono_clone_system import ChronoCloneSystem
+from ..systems.time_reversal_system import TimeReversalSystem
+from ..systems.audio_manager import AudioManager, SoundType, get_audio_manager
 
 from ..levels.level_manager import LevelManager
 
@@ -53,6 +67,12 @@ class Game:
     - Run the main game loop
     - Handle state transitions
     - Coordinate updates and rendering
+    
+    TEMPORAL DEBT 2.0:
+    - Momentum system rewards not freezing
+    - Resonance waves create timing challenges
+    - Clone system enables new puzzle strategies
+    - Time reversal provides emergency escape
     """
     
     def __init__(self):
@@ -66,7 +86,7 @@ class Game:
         except Exception as e:
             print(f"Warning: Audio initialization failed: {e}")
         
-        pygame.display.set_caption(Settings.TITLE)
+        pygame.display.set_caption(Settings.TITLE + " 2.0")
         
         # Create display (DOUBLEBUF may cause issues in WASM, use default)
         try:
@@ -100,6 +120,15 @@ class Game:
         self.echo_system: Optional[EchoSystem] = None
         self.anchor_system: Optional[AnchorSystem] = None
         
+        # V2.0 Systems
+        self.momentum_system: Optional[MomentumSystem] = None
+        self.resonance_system: Optional[ResonanceSystem] = None
+        self.clone_system: Optional[ChronoCloneSystem] = None
+        self.reversal_system: Optional[TimeReversalSystem] = None
+        
+        # V2.0 Fragment manager (from interactables_v2)
+        self.fragment_manager = None
+        
         # Level management
         self.level_manager: Optional[LevelManager] = None
         
@@ -120,6 +149,13 @@ class Game:
         self.controls_display = ControlsDisplay()
         self.game_tips = GameTips()
         self.show_tutorial = True  # Flag for first-time players
+        
+        # Audio System
+        self.audio: Optional[AudioManager] = None
+        try:
+            self.audio = get_audio_manager()
+        except Exception as e:
+            print(f"Warning: Audio system failed to initialize: {e}")
         
         # Tracking
         self.total_play_time = 0.0
@@ -155,6 +191,8 @@ class Game:
             lifetime=1.0
         )
         self._death_timer = 1.5
+        if self.audio:
+            self.audio.play(SoundType.PLAYER_DEATH)
     
     def _on_level_completed(self, _event_data) -> None:
         """Handle level completion event."""
@@ -173,6 +211,8 @@ class Game:
             )
         
         self.state = GameState.VICTORY
+        if self.audio:
+            self.audio.play(SoundType.LEVEL_COMPLETE)
     
     def _on_debt_tier_changed(self, event_data) -> None:
         """Handle debt tier change."""
@@ -181,19 +221,29 @@ class Game:
         
         if new_tier >= 3:
             self.screen_effects.trigger_shake(new_tier * 2)
+            if self.audio:
+                self.audio.play(SoundType.DEBT_WARNING)
     
     def _on_bankruptcy(self, _event_data) -> None:
         """Handle bankruptcy event."""
         self.screen_effects.flash(COLORS.TIER_BANKRUPTCY, 300)
         self.screen_effects.trigger_shake(25)
+        if self.audio:
+            self.audio.play(SoundType.DEBT_CRITICAL)
     
     def _on_time_frozen(self, _event_data) -> None:
         """Handle time freeze start."""
         self.screen_effects.set_freeze_active(True)
+        if self.audio:
+            self.audio.play(SoundType.TIME_FREEZE_START)
+            self.audio.play(SoundType.TIME_FREEZE_LOOP, volume=0.3, loop=True)
     
     def _on_time_unfrozen(self, _event_data) -> None:
         """Handle time unfreeze."""
         self.screen_effects.set_freeze_active(False)
+        if self.audio:
+            self.audio.stop(SoundType.TIME_FREEZE_LOOP)
+            self.audio.play(SoundType.TIME_FREEZE_END)
     
     def _init_game_systems(self) -> None:
         """Initialize game systems for a new game."""
@@ -215,6 +265,21 @@ class Game:
         self.echo_system = EchoSystem()
         self.anchor_system = AnchorSystem(self.debt_manager, self.event_manager)
         
+        # V2.0 Systems initialization
+        self.momentum_system = MomentumSystem(self.event_manager)
+        self.resonance_system = ResonanceSystem(self.event_manager)
+        self.resonance_system.set_systems(self.time_engine, self.debt_manager)
+        self.clone_system = ChronoCloneSystem(self.event_manager)
+        self.reversal_system = TimeReversalSystem(self.event_manager)
+        self.reversal_system.set_debt_manager(self.debt_manager)
+        
+        # Import and create fragment manager
+        try:
+            from ..entities.interactables_v2 import FragmentManager
+            self.fragment_manager = FragmentManager()
+        except ImportError:
+            self.fragment_manager = None
+        
         # Create level manager
         self.level_manager = LevelManager(self.event_manager)
         self.level_manager.set_systems(self.debt_manager, self.time_engine)
@@ -227,6 +292,16 @@ class Game:
             self.anchor_system,
             self.level_manager
         )
+        
+        # Set V2 systems on HUD if available
+        if hasattr(self.hud, 'set_v2_systems'):
+            self.hud.set_v2_systems(
+                self.momentum_system,
+                self.resonance_system,
+                self.clone_system,
+                self.reversal_system,
+                self.fragment_manager
+            )
         
         # Reset tracking
         self.total_play_time = 0.0
@@ -274,6 +349,8 @@ class Game:
     
     def cleanup(self) -> None:
         """Cleanup when game ends."""
+        if self.audio:
+            self.audio.cleanup()
         pygame.quit()
     
     def _handle_events(self) -> None:
@@ -308,6 +385,13 @@ class Game:
     def _handle_menu_event(self, event: pygame.event.Event, menu) -> None:
         """Handle events in menu states."""
         result = menu.handle_input(event)
+        
+        # Play menu sounds
+        if event.type == pygame.KEYDOWN and self.audio:
+            if event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_w, pygame.K_s):
+                self.audio.play(SoundType.MENU_SELECT, volume=0.5)
+            elif event.key in (pygame.K_RETURN, pygame.K_SPACE) and result:
+                self.audio.play(SoundType.MENU_CONFIRM)
         
         if result == "start":
             self.start_game()
@@ -364,6 +448,8 @@ class Game:
                             speed=50,
                             lifetime=0.5
                         )
+                        if self.audio:
+                            self.audio.play(SoundType.ANCHOR_PLACE)
             
             elif event.key == pygame.K_e:
                 # Recall to anchor
@@ -377,13 +463,58 @@ class Game:
                         self.screen_effects.flash(COLORS.ANCHOR, 100)
                         self.particles.emit(old_pos, count=20, color=COLORS.ANCHOR, speed=80)
                         self.particles.emit(new_pos, count=25, color=COLORS.ANCHOR, speed=100)
+                        if self.audio:
+                            self.audio.play(SoundType.ANCHOR_RECALL)
             
             elif event.key == pygame.K_TAB:
                 # Toggle controls display
                 self.controls_display.toggle()
             
-            elif event.key == pygame.K_r and Settings.DEBUG_MODE:
-                self._restart_level()
+            # V2.0 Controls
+            elif event.key == pygame.K_c:
+                # Spawn chrono-clone
+                if self.clone_system and self.clone_system.can_spawn_clone:
+                    if self.clone_system.spawn_clone():
+                        self.screen_effects.flash((150, 200, 255), 80)
+                        if self.level_manager and self.level_manager.player:
+                            self.particles.emit(
+                                self.level_manager.player.center,
+                                count=20,
+                                color=(150, 200, 255),
+                                speed=80,
+                                lifetime=0.6
+                            )
+                        if self.audio:
+                            self.audio.play(SoundType.CLONE_SPAWN)
+            
+            elif event.key == pygame.K_r:
+                # Time reversal (V2) or restart level (debug)
+                if self.reversal_system and self.reversal_system.can_rewind:
+                    snapshot = self.reversal_system.initiate_rewind()
+                    if snapshot and self.level_manager and self.level_manager.player:
+                        # Restore player position
+                        self.level_manager.player.position = snapshot.player_position
+                        self.screen_effects.flash((200, 150, 255), 200)
+                        if self.audio:
+                            self.audio.play(SoundType.REWIND_ACTIVATE)
+                elif Settings.DEBUG_MODE:
+                    self._restart_level()
+            
+            elif event.key == pygame.K_b:
+                # Activate slow-motion burst from fragments
+                if self.fragment_manager and self.fragment_manager.can_burst:
+                    if self.fragment_manager.activate_burst():
+                        self.screen_effects.flash((200, 220, 255), 150)
+                        if self.level_manager and self.level_manager.player:
+                            self.particles.emit(
+                                self.level_manager.player.center,
+                                count=30,
+                                color=(200, 220, 255),
+                                speed=100,
+                                lifetime=0.8
+                            )
+                        if self.audio:
+                            self.audio.play(SoundType.FRAGMENT_BURST)
     
     def _update(self, dt: float) -> None:
         """Update game state."""
@@ -513,6 +644,59 @@ class Game:
         if self.anchor_system:
             self.anchor_system.update(dt)
         
+        # ============================================
+        # V2.0 SYSTEM UPDATES
+        # ============================================
+        
+        # Determine if player is moving
+        player_moving = False
+        if self.level_manager and self.level_manager.player:
+            player = self.level_manager.player
+            player_moving = player.velocity.magnitude() > 0
+        
+        # Update momentum system
+        if self.momentum_system:
+            self.momentum_system.update(dt)
+            # Apply momentum debt reduction to debt manager
+            if self.debt_manager and hasattr(self.debt_manager, 'set_momentum_multiplier'):
+                self.debt_manager.set_momentum_multiplier(
+                    self.momentum_system.debt_reduction_multiplier
+                )
+        
+        # Update resonance system
+        if self.resonance_system:
+            self.resonance_system.update(dt, player_moving)
+        
+        # Update clone system (record player position)
+        if self.clone_system and self.level_manager and self.level_manager.player:
+            self.clone_system.update(dt, self.level_manager.player.center)
+        
+        # Update reversal system (record game state)
+        if self.reversal_system and self.level_manager and self.level_manager.player:
+            player = self.level_manager.player
+            debt = self.debt_manager.current_debt if self.debt_manager else 0
+            tier = self.debt_manager.current_tier if self.debt_manager else 0
+            self.reversal_system.record_state(
+                player.position,
+                player.velocity,
+                self.level_manager.entities,
+                debt,
+                tier,
+                dt
+            )
+            self.reversal_system.update(dt)
+        
+        # Update fragment manager
+        if self.fragment_manager:
+            self.fragment_manager.update(dt)
+            # Apply slow-motion effect if burst is active
+            if self.fragment_manager.is_burst_active and self.time_engine:
+                # Slow down game time during burst (handled in time engine)
+                pass
+        
+        # V2.0 Entity Interactions
+        self._update_v2_interactions(dt)
+        
         # Update HUD
         if self.hud:
             self.hud.update(dt)
@@ -531,6 +715,89 @@ class Game:
             if self.debt_manager.current_debt > Settings.BANKRUPTCY_THRESHOLD + 5:
                 if self.level_manager and self.level_manager.player:
                     self.level_manager.player.die()
+    
+    def _update_v2_interactions(self, dt: float) -> None:
+        """Handle V2.0 entity interactions."""
+        if not self.level_manager or not self.level_manager.player:
+            return
+        
+        player = self.level_manager.player
+        player_rect = player.get_rect()
+        
+        # Import V2 entities
+        try:
+            from ..entities.interactables_v2 import TimeDilationZone, TemporalFragment, DebtTransferPod
+        except ImportError:
+            return
+        
+        keys = pygame.key.get_pressed()
+        
+        # Active debt multiplier from dilation zones
+        total_multiplier = 1.0
+        
+        for entity in self.level_manager.entities:
+            # Time Dilation Zones
+            if isinstance(entity, TimeDilationZone):
+                if entity.check_player_inside(player_rect):
+                    total_multiplier *= entity.debt_multiplier
+                entity.update(dt)
+            
+            # Temporal Fragments
+            elif isinstance(entity, TemporalFragment) and not entity.collected:
+                if player_rect.colliderect(entity.get_rect()) and self.debt_manager:
+                    result = entity.collect(self.debt_manager)
+                    if result['success']:
+                        # Add to fragment manager
+                        if self.fragment_manager:
+                            self.fragment_manager.add_fragment(
+                                result['fragment_id'],
+                                result['fragment_value']
+                            )
+                        # Visual feedback
+                        self.particles.emit(
+                            entity.center,
+                            count=20,
+                            color=(200, 220, 255),
+                            speed=60,
+                            lifetime=0.8
+                        )
+                        self.screen_effects.flash((200, 220, 255), 80)
+                        # Audio feedback
+                        if self.audio:
+                            self.audio.play(SoundType.FRAGMENT_COLLECT)
+                entity.update(dt)
+            
+            # Debt Transfer Pods
+            elif isinstance(entity, DebtTransferPod):
+                if player_rect.colliderect(entity.get_rect()):
+                    # Hold F to deposit debt
+                    if keys[pygame.K_f] and self.debt_manager:
+                        deposited = entity.deposit_debt(self.debt_manager, dt)
+                        if deposited > 0:
+                            # Visual feedback
+                            self.particles.emit(
+                                player.center,
+                                count=3,
+                                color=(255, 200, 100),
+                                speed=30,
+                                lifetime=0.3
+                            )
+                            # Audio feedback (throttled)
+                            if self.audio and not hasattr(self, '_pod_sound_cooldown'):
+                                self._pod_sound_cooldown = 0
+                            if self.audio:
+                                self._pod_sound_cooldown = getattr(self, '_pod_sound_cooldown', 0) - dt
+                                if self._pod_sound_cooldown <= 0:
+                                    self.audio.play(SoundType.POD_DEPOSIT, volume=0.5)
+                                    self._pod_sound_cooldown = 0.2
+                    else:
+                        entity.stop_deposit()
+                else:
+                    entity.stop_deposit()
+                entity.update(dt)
+        
+        # Apply combined zone multiplier to debt manager
+        # (This would need debt_manager modification to support)
     
     def _render(self) -> None:
         """Render the current state."""
@@ -584,6 +851,22 @@ class Game:
         if self.anchor_system:
             self.anchor_system.render(self.game_surface)
         
+        # ============================================
+        # V2.0 SYSTEM RENDERING
+        # ============================================
+        
+        # Render chrono clones
+        if self.clone_system:
+            self.clone_system.render(self.game_surface)
+        
+        # Render reversal effects
+        if self.reversal_system:
+            self.reversal_system.render(self.game_surface)
+        
+        # Render resonance wave effect
+        if self.resonance_system:
+            self.resonance_system.render(self.game_surface)
+        
         # Render particles
         self.particles.render(self.game_surface)
         
@@ -596,7 +879,32 @@ class Game:
         
         # Render HUD on top (not affected by shake)
         if self.hud:
+            # Update HUD with V2 data
+            self._update_hud_v2_data()
             self.hud.render(self.screen)
+    
+    def _update_hud_v2_data(self) -> None:
+        """Update HUD with V2.0 system data."""
+        if not self.hud:
+            return
+        
+        # Set V2 data on HUD if it supports it
+        if hasattr(self.hud, 'set_v2_data'):
+            v2_data = {
+                'momentum': self.momentum_system.momentum if self.momentum_system else 0,
+                'max_momentum': self.momentum_system.MAX_MOMENTUM if self.momentum_system else 10,
+                'resonance_progress': self.resonance_system.wave_progress if self.resonance_system else 0,
+                'resonance_state': self.resonance_system.phase.name.lower() if self.resonance_system else 'calm',
+                'clone_cooldown': self.clone_system.cooldown_remaining if self.clone_system else 0,
+                'clone_recording': self.clone_system.is_recording if self.clone_system else False,
+                'reversal_available': self.reversal_system.uses_remaining > 0 if self.reversal_system else False,
+                'reversal_uses': self.reversal_system.uses_remaining if self.reversal_system else 0,
+                'fragments_collected': self.fragment_manager.fragments_collected if self.fragment_manager else 0,
+                'fragment_energy': self.fragment_manager.fragment_energy if self.fragment_manager else 0,
+                'burst_ready': self.fragment_manager.is_burst_ready if self.fragment_manager else False,
+                'burst_active': self.fragment_manager.is_burst_active if self.fragment_manager else False,
+            }
+            self.hud.set_v2_data(v2_data)
     
     def _restart_level(self) -> None:
         """Restart the current level."""
@@ -608,6 +916,18 @@ class Game:
             self.time_engine.reset()
         if self.anchor_system:
             self.anchor_system.clear_all()
+        
+        # Reset V2.0 systems
+        if self.momentum_system:
+            self.momentum_system.reset()
+        if self.resonance_system:
+            self.resonance_system.reset()
+        if self.clone_system:
+            self.clone_system.reset()
+        if self.reversal_system:
+            self.reversal_system.reset()
+        if self.fragment_manager:
+            self.fragment_manager.reset()
         
         self.particles.clear()
         self.screen_effects.reset()
@@ -625,6 +945,18 @@ class Game:
                 self.time_engine.reset()
             if self.anchor_system:
                 self.anchor_system.clear_all()
+            
+            # Reset V2.0 systems for new level
+            if self.momentum_system:
+                self.momentum_system.reset()
+            if self.resonance_system:
+                self.resonance_system.reset()
+            if self.clone_system:
+                self.clone_system.reset()
+            if self.reversal_system:
+                self.reversal_system.reset()
+            if self.fragment_manager:
+                self.fragment_manager.reset()
             
             self.particles.clear()
             self.screen_effects.reset()
