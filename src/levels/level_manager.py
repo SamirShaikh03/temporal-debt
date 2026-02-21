@@ -253,6 +253,42 @@ class LevelManager:
             )
             return door
         
+        # V2.0 Entity Types
+        elif data.entity_type == "temporal_fragment":
+            try:
+                from ..entities.interactables_v2 import TemporalFragment
+                fragment = TemporalFragment(
+                    position=position,
+                    fragment_id=props.get("fragment_id", 0)
+                )
+                return fragment
+            except ImportError:
+                return None
+        
+        elif data.entity_type == "dilation_zone":
+            try:
+                from ..entities.interactables_v2 import TimeDilationZone
+                zone = TimeDilationZone(
+                    position=position,
+                    zone_type=props.get("zone_type", "safe"),
+                    width=props.get("width", 128),
+                    height=props.get("height", 128)
+                )
+                return zone
+            except ImportError:
+                return None
+        
+        elif data.entity_type == "debt_transfer_pod":
+            try:
+                from ..entities.interactables_v2 import DebtTransferPod
+                pod = DebtTransferPod(
+                    position=position,
+                    pod_id=props.get("pod_id", 0)
+                )
+                return pod
+            except ImportError:
+                return None
+        
         return None
     
     def update(self, dt: float, game_dt: float) -> None:
@@ -385,22 +421,42 @@ class LevelManager:
         Args:
             screen: Surface to render to
         """
+        # Import V2 entities for type checking
+        try:
+            from ..entities.interactables_v2 import TimeDilationZone, TemporalFragment, DebtTransferPod
+            has_v2_entities = True
+        except ImportError:
+            has_v2_entities = False
+        
         # Render tiles
         if self.tile_grid:
             self.tile_grid.render(screen)
         
-        # Render entities (sorted by type for proper layering)
-        # First: interactables
+        # First layer: Dilation zones (background effect)
+        if has_v2_entities:
+            for entity in self.entities:
+                if isinstance(entity, TimeDilationZone):
+                    entity.render(screen)
+        
+        # Second layer: interactables
         for entity in self.entities:
             if isinstance(entity, (DebtSink, DebtBomb, TimedDoor)):
                 entity.render(screen)
+            elif has_v2_entities and isinstance(entity, DebtTransferPod):
+                entity.render(screen)
         
-        # Second: checkpoints and exit
+        # Third layer: checkpoints and exit
         for entity in self.entities:
             if isinstance(entity, (Checkpoint, ExitZone)):
                 entity.render(screen)
         
-        # Third: enemies
+        # Fourth layer: collectibles (fragments)
+        if has_v2_entities:
+            for entity in self.entities:
+                if isinstance(entity, TemporalFragment):
+                    entity.render(screen)
+        
+        # Fifth layer: enemies
         for entity in self.entities:
             if isinstance(entity, (PatrolDrone, TemporalHunter, DebtShadow)):
                 entity.render(screen)

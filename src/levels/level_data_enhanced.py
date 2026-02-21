@@ -652,13 +652,485 @@ LEVEL_6 = LevelData(
 # ALL LEVELS LIST
 # =============================================================================
 
+# =============================================================================
+# LEVEL 7: MOMENTUM MASTERY - Learn Momentum System
+# =============================================================================
+
+LEVEL_7 = LevelData(
+    name="MOMENTUM MASTERY",
+    description="Build temporal momentum to reduce debt costs",
+    hint="Don't freeze time! Build momentum by moving without freezing. Watch your momentum meter!",
+    tile_map=[
+        "##########################",
+        "#S.......................#",
+        "#........................#",
+        "#..####..........####....#",
+        "#..#..#..........#..#....#",
+        "#..#..#....DD....#..#....#",
+        "#..####..........####....#",
+        "#........................#",
+        "#....ZZZZZZZZZZZZZZ......#",
+        "#....Z............Z......#",
+        "#....Z............Z......#",
+        "#....ZZZZZZZZZZZZZZ....E.#",
+        "#........................#",
+        "##########################",
+    ],
+    entities=[
+        # Slow predictable patrols - encourage no-freeze completion
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=8,
+            grid_y=4,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(6, 4), (12, 4)],
+                'speed': 50
+            }
+        ),
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=18,
+            grid_y=7,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(15, 7), (21, 7)],
+                'speed': 45
+            }
+        ),
+        # Temporal fragments to collect
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=3,
+            grid_y=6,
+            properties={'fragment_id': 1}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=10,
+            grid_y=3,
+            properties={'fragment_id': 2}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=20,
+            grid_y=10,
+            properties={'fragment_id': 3}
+        ),
+        # Safe zone in the corner
+        EntityData(
+            entity_type='dilation_zone',
+            grid_x=5,
+            grid_y=9,
+            properties={
+                'zone_type': 'safe',
+                'width': 288,
+                'height': 96
+            }
+        ),
+    ],
+    par_time=35.0,
+    max_debt_allowed=15.0
+)
+
+
+# =============================================================================
+# LEVEL 8: CLONE PROTOCOL - Master the Chrono-Clone
+# =============================================================================
+
+LEVEL_8 = LevelData(
+    name="CLONE PROTOCOL",
+    description="Your past self becomes your greatest ally",
+    hint="Press C to spawn a clone that replays your movements. Use it to distract enemies!",
+    tile_map=[
+        "##########################",
+        "#S.............#........#",
+        "#..............#........#",
+        "#..............#........#",
+        "####..####.....#..####..#",
+        "#........#.....#..#.....#",
+        "#..D.....#.....#..#..D..#",
+        "#........#.....####.....#",
+        "####..####..............#",
+        "#.......................#",
+        "#.......................#",
+        "#........#########....E.#",
+        "#.......................#",
+        "##########################",
+    ],
+    entities=[
+        # Seeker drone - clone can distract it
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=10,
+            grid_y=6,
+            properties={
+                'drone_type': 'seeker',
+                'speed': 60
+            }
+        ),
+        # Guards that clones can distract
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=18,
+            grid_y=3,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(16, 3), (22, 3)],
+                'speed': 80
+            }
+        ),
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=18,
+            grid_y=10,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(16, 10), (22, 10)],
+                'speed': 90
+            }
+        ),
+        # Temporal Hunter
+        EntityData(
+            entity_type='temporal_hunter',
+            grid_x=6,
+            grid_y=7,
+            properties={'speed': 70}
+        ),
+        # Fragments
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=5,
+            grid_y=6,
+            properties={'fragment_id': 4}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=21,
+            grid_y=6,
+            properties={'fragment_id': 5}
+        ),
+    ],
+    par_time=50.0,
+    max_debt_allowed=18.0
+)
+
+
+# =============================================================================
+# LEVEL 9: RESONANCE CHAMBER - Survive the Waves
+# =============================================================================
+
+LEVEL_9 = LevelData(
+    name="RESONANCE CHAMBER",
+    description="Time itself pulses through this chamber",
+    hint="Resonance waves punish freezing! Watch for warnings and keep moving during waves!",
+    tile_map=[
+        "##########################",
+        "#S...........#..........#",
+        "#............#..........#",
+        "#....###.....#.....###..#",
+        "#....#.#.....#.....#.#..#",
+        "#....###..D..#..D..###..#",
+        "#............#..........#",
+        "#............#..........#",
+        "######.......#.......####",
+        "#............#..........#",
+        "#.RRR........#........RR#",
+        "#.RRR........#........RR#",
+        "#......................E#",
+        "##########################",
+    ],
+    entities=[
+        # Multiple patrols requiring careful timing
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=6,
+            grid_y=2,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(2, 2), (10, 2)],
+                'speed': 100
+            }
+        ),
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=17,
+            grid_y=6,
+            properties={
+                'drone_type': 'circular',
+                'orbit_radius': 72,
+                'orbit_speed': 1.2,
+                'speed': 80
+            }
+        ),
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=6,
+            grid_y=10,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(2, 10), (10, 10)],
+                'speed': 110
+            }
+        ),
+        # Temporal Hunters - extra punishment for freezing
+        EntityData(
+            entity_type='temporal_hunter',
+            grid_x=8,
+            grid_y=5,
+            properties={'speed': 90}
+        ),
+        EntityData(
+            entity_type='temporal_hunter',
+            grid_x=18,
+            grid_y=9,
+            properties={'speed': 80}
+        ),
+        # Danger zones - risky shortcuts
+        EntityData(
+            entity_type='dilation_zone',
+            grid_x=2,
+            grid_y=10,
+            properties={
+                'zone_type': 'danger',
+                'width': 144,
+                'height': 96
+            }
+        ),
+        EntityData(
+            entity_type='dilation_zone',
+            grid_x=21,
+            grid_y=10,
+            properties={
+                'zone_type': 'danger',
+                'width': 96,
+                'height': 96
+            }
+        ),
+        # Fragments
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=3,
+            grid_y=11,
+            properties={'fragment_id': 6}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=22,
+            grid_y=11,
+            properties={'fragment_id': 7}
+        ),
+    ],
+    par_time=45.0,
+    max_debt_allowed=16.0
+)
+
+
+# =============================================================================
+# LEVEL 10: TEMPORAL NEXUS - The Ultimate Challenge
+# =============================================================================
+
+LEVEL_10 = LevelData(
+    name="TEMPORAL NEXUS",
+    description="All systems converge. Master time itself.",
+    hint="Use everything you've learned: momentum, clones, fragments, and careful timing!",
+    tile_map=[
+        "##########################",
+        "#S..........#..........E#",
+        "#...........#...........#",
+        "#..###......#......###..#",
+        "#..#.#......#......#.#..#",
+        "#..#.#....DDDDD....#.#..#",
+        "#..###......#......###..#",
+        "#...........#...........#",
+        "####........#........####",
+        "#...........#...........#",
+        "#.ZZ..RRR...#...RRR..ZZ.#",
+        "#.ZZ..RRR...#...RRR..ZZ.#",
+        "#...........#...........#",
+        "##########################",
+    ],
+    entities=[
+        # Seekers on both sides
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=5,
+            grid_y=5,
+            properties={
+                'drone_type': 'seeker',
+                'speed': 55
+            }
+        ),
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=19,
+            grid_y=5,
+            properties={
+                'drone_type': 'seeker',
+                'speed': 55
+            }
+        ),
+        # Fast patrols
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=5,
+            grid_y=9,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(2, 9), (10, 9)],
+                'speed': 130
+            }
+        ),
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=19,
+            grid_y=9,
+            properties={
+                'drone_type': 'linear',
+                'patrol_points': [(14, 9), (22, 9)],
+                'speed': 130
+            }
+        ),
+        # Circular guards near exit
+        EntityData(
+            entity_type='patrol_drone',
+            grid_x=20,
+            grid_y=3,
+            properties={
+                'drone_type': 'circular',
+                'orbit_radius': 60,
+                'orbit_speed': 2.0,
+                'speed': 100
+            }
+        ),
+        # Multiple Temporal Hunters
+        EntityData(
+            entity_type='temporal_hunter',
+            grid_x=4,
+            grid_y=4,
+            properties={'speed': 100}
+        ),
+        EntityData(
+            entity_type='temporal_hunter',
+            grid_x=20,
+            grid_y=4,
+            properties={'speed': 100}
+        ),
+        EntityData(
+            entity_type='temporal_hunter',
+            grid_x=12,
+            grid_y=7,
+            properties={'speed': 110}
+        ),
+        # Debt Transfer Pods in center
+        EntityData(
+            entity_type='debt_transfer_pod',
+            grid_x=10,
+            grid_y=5,
+            properties={'pod_id': 1}
+        ),
+        EntityData(
+            entity_type='debt_transfer_pod',
+            grid_x=12,
+            grid_y=5,
+            properties={'pod_id': 2}
+        ),
+        EntityData(
+            entity_type='debt_transfer_pod',
+            grid_x=14,
+            grid_y=5,
+            properties={'pod_id': 3}
+        ),
+        # Safe zones in corners
+        EntityData(
+            entity_type='dilation_zone',
+            grid_x=2,
+            grid_y=10,
+            properties={
+                'zone_type': 'safe',
+                'width': 96,
+                'height': 96
+            }
+        ),
+        EntityData(
+            entity_type='dilation_zone',
+            grid_x=21,
+            grid_y=10,
+            properties={
+                'zone_type': 'safe',
+                'width': 96,
+                'height': 96
+            }
+        ),
+        # Danger zones with fragments
+        EntityData(
+            entity_type='dilation_zone',
+            grid_x=5,
+            grid_y=10,
+            properties={
+                'zone_type': 'danger',
+                'width': 144,
+                'height': 96
+            }
+        ),
+        EntityData(
+            entity_type='dilation_zone',
+            grid_x=16,
+            grid_y=10,
+            properties={
+                'zone_type': 'danger',
+                'width': 144,
+                'height': 96
+            }
+        ),
+        # Temporal fragments scattered throughout
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=2,
+            grid_y=11,
+            properties={'fragment_id': 8}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=7,
+            grid_y=11,
+            properties={'fragment_id': 9}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=17,
+            grid_y=11,
+            properties={'fragment_id': 10}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=22,
+            grid_y=11,
+            properties={'fragment_id': 11}
+        ),
+        EntityData(
+            entity_type='temporal_fragment',
+            grid_x=12,
+            grid_y=2,
+            properties={'fragment_id': 12}
+        ),
+    ],
+    par_time=60.0,
+    max_debt_allowed=12.0
+)
+
+
 ALL_LEVELS = [
     LEVEL_1,
     LEVEL_2,
     LEVEL_3,
     LEVEL_4,
     LEVEL_5,
-    LEVEL_6
+    LEVEL_6,
+    LEVEL_7,
+    LEVEL_8,
+    LEVEL_9,
+    LEVEL_10
 ]
 
 # Level selection helper

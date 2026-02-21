@@ -55,6 +55,26 @@ class HUD:
         self.margin = 20
         self.bar_height = 30
         self.bar_width = 300
+        
+        # V2.0 Data
+        self._v2_data = {
+            'momentum': 0,
+            'max_momentum': 10,
+            'resonance_progress': 0,
+            'resonance_state': 'idle',
+            'clone_cooldown': 0,
+            'clone_recording': False,
+            'reversal_available': False,
+            'reversal_uses': 0,
+            'fragments_collected': 0,
+            'fragment_energy': 0,
+            'burst_ready': False,
+            'burst_active': False,
+        }
+        
+        # V2 Animation state
+        self._momentum_display = 0.0
+        self._fragment_pulse = 0.0
     
     def set_systems(self, debt_manager, time_engine, anchor_system, level_manager):
         """Set system references."""
@@ -62,6 +82,10 @@ class HUD:
         self._time_engine = time_engine
         self._anchor_system = anchor_system
         self._level_manager = level_manager
+    
+    def set_v2_data(self, data: dict) -> None:
+        """Set V2.0 system data for display."""
+        self._v2_data.update(data)
     
     def update(self, dt: float) -> None:
         """Update HUD animations."""
@@ -79,6 +103,16 @@ class HUD:
         # Warning pulse for high debt
         if self._debt_manager and self._debt_manager.current_tier >= 3:
             self._warning_pulse += dt * 5
+        
+        # V2.0 Animation updates
+        target_momentum = self._v2_data.get('momentum', 0)
+        self._momentum_display = lerp(self._momentum_display, target_momentum, dt * 3)
+        
+        # Fragment pulse when burst ready
+        if self._v2_data.get('burst_ready', False):
+            self._fragment_pulse += dt * 4
+        else:
+            self._fragment_pulse = 0.0
     
     def render(self, screen: pygame.Surface) -> None:
         """
@@ -98,6 +132,11 @@ class HUD:
         
         # Level info (bottom left)
         self._render_level_info(screen)
+        
+        # V2.0 HUD elements
+        self._render_momentum_meter(screen)
+        self._render_fragment_energy(screen)
+        self._render_ability_cooldowns(screen)
         
         # FPS counter (if enabled)
         if Settings.SHOW_FPS:
@@ -309,3 +348,161 @@ class HUD:
         for i, text in enumerate(controls):
             surface = self.font_small.render(text, True, COLORS.GRAY)
             screen.blit(surface, (x, y + i * 20))
+    
+    # ============================================
+    # V2.0 HUD RENDERING
+    # ============================================
+    
+    def _render_momentum_meter(self, screen: pygame.Surface) -> None:
+        """Render temporal momentum meter (bottom right, above ability cooldowns)."""
+        # Position below anchor status, right side
+        x = Settings.SCREEN_WIDTH - self.margin - 160
+        y = self.margin + 80
+        
+        # Momentum bar dimensions
+        bar_width = 140
+        bar_height = 16
+        
+        # Background
+        bg_rect = pygame.Rect(x, y, bar_width, bar_height)
+        pygame.draw.rect(screen, (30, 35, 50), bg_rect, border_radius=3)
+        
+        # Fill based on momentum
+        max_momentum = self._v2_data.get('max_momentum', 10)
+        fill_pct = self._momentum_display / max_momentum if max_momentum > 0 else 0
+        fill_width = int(bar_width * min(1.0, fill_pct))
+        
+        if fill_width > 0:
+            # Gradient from cyan to gold as momentum builds
+            r = int(lerp(80, 255, fill_pct))
+            g = int(lerp(200, 215, fill_pct))
+            b = int(lerp(255, 80, fill_pct))
+            fill_color = (r, g, b)
+            
+            fill_rect = pygame.Rect(x, y, fill_width, bar_height)
+            pygame.draw.rect(screen, fill_color, fill_rect, border_radius=3)
+        
+        # Border
+        pygame.draw.rect(screen, (100, 120, 160), bg_rect, 1, border_radius=3)
+        
+        # Label
+        label = "MOMENTUM"
+        label_surface = self.font_small.render(label, True, (150, 170, 200))
+        screen.blit(label_surface, (x, y - 18))
+        
+        # Value text
+        value_text = f"{self._momentum_display:.1f}x"
+        value_surface = self.font_small.render(value_text, True, (200, 220, 255))
+        value_rect = value_surface.get_rect(right=x + bar_width, top=y - 18)
+        screen.blit(value_surface, value_rect)
+    
+    def _render_fragment_energy(self, screen: pygame.Surface) -> None:
+        """Render temporal fragment energy display."""
+        # Position on right side, below momentum
+        x = Settings.SCREEN_WIDTH - self.margin - 160
+        y = self.margin + 130
+        
+        fragments = self._v2_data.get('fragments_collected', 0)
+        _energy = self._v2_data.get('fragment_energy', 0)  # Reserved for future use
+        burst_ready = self._v2_data.get('burst_ready', False)
+        burst_active = self._v2_data.get('burst_active', False)
+        
+        # Display fragment orbs (max 5)
+        orb_radius = 10
+        orb_spacing = 28
+        
+        for i in range(5):
+            orb_x = x + i * orb_spacing + orb_radius
+            orb_y = y + orb_radius
+            
+            # Draw orb
+            if i < fragments:
+                # Collected fragment - glowing
+                color = (200, 220, 255)
+                if burst_ready:
+                    # Pulse when ready
+                    pulse = (math.sin(self._fragment_pulse) + 1) / 2
+                    glow = int(50 * pulse)
+                    pygame.draw.circle(screen, (150 + glow, 180 + glow, 255), 
+                                      (orb_x, orb_y), orb_radius + 3)
+                pygame.draw.circle(screen, color, (orb_x, orb_y), orb_radius)
+            else:
+                # Empty slot
+                pygame.draw.circle(screen, (40, 50, 70), (orb_x, orb_y), orb_radius)
+                pygame.draw.circle(screen, (80, 100, 130), (orb_x, orb_y), orb_radius, 1)
+        
+        # Label
+        if burst_active:
+            label = "BURST ACTIVE!"
+            label_color = (255, 220, 100)
+        elif burst_ready:
+            label = "PRESS B - BURST"
+            label_color = (200, 255, 200)
+        else:
+            label = "FRAGMENTS"
+            label_color = (150, 170, 200)
+        
+        label_surface = self.font_small.render(label, True, label_color)
+        screen.blit(label_surface, (x, y - 18))
+    
+    def _render_ability_cooldowns(self, screen: pygame.Surface) -> None:
+        """Render V2 ability cooldown indicators."""
+        # Position in bottom right corner
+        x = Settings.SCREEN_WIDTH - self.margin - 180
+        y = Settings.SCREEN_HEIGHT - self.margin - 80
+        
+        # Panel background
+        panel_width = 160
+        panel_height = 70
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        pygame.draw.rect(panel, (15, 20, 35, 180), (0, 0, panel_width, panel_height), border_radius=6)
+        pygame.draw.rect(panel, (60, 80, 120), (0, 0, panel_width, panel_height), width=1, border_radius=6)
+        screen.blit(panel, (x, y))
+        
+        # Clone ability (C key)
+        clone_cooldown = self._v2_data.get('clone_cooldown', 0)
+        clone_recording = self._v2_data.get('clone_recording', False)
+        
+        if clone_recording:
+            clone_text = "[C] RECORDING..."
+            clone_color = (255, 150, 100)
+        elif clone_cooldown > 0:
+            clone_text = f"[C] Clone: {clone_cooldown:.1f}s"
+            clone_color = (120, 120, 140)
+        else:
+            clone_text = "[C] Clone Ready"
+            clone_color = (120, 255, 180)
+        
+        clone_surface = self.font_small.render(clone_text, True, clone_color)
+        screen.blit(clone_surface, (x + 8, y + 8))
+        
+        # Rewind ability (R key)
+        reversal_available = self._v2_data.get('reversal_available', False)
+        reversal_uses = self._v2_data.get('reversal_uses', 0)
+        
+        if reversal_available:
+            rewind_text = f"[R] Rewind ({reversal_uses})"
+            rewind_color = (200, 180, 255)
+        else:
+            rewind_text = "[R] Rewind: USED"
+            rewind_color = (80, 80, 100)
+        
+        rewind_surface = self.font_small.render(rewind_text, True, rewind_color)
+        screen.blit(rewind_surface, (x + 8, y + 28))
+        
+        # Resonance state
+        resonance_state = self._v2_data.get('resonance_state', 'idle')
+        resonance_progress = self._v2_data.get('resonance_progress', 0)
+        
+        if resonance_state == 'warning':
+            res_text = "⚡ WAVE INCOMING"
+            res_color = (255, 200, 100)
+        elif resonance_state == 'active':
+            res_text = "⚡ WAVE ACTIVE!"
+            res_color = (255, 100, 100)
+        else:
+            res_text = f"⚡ Wave: {int(resonance_progress * 100)}%"
+            res_color = (100, 120, 160)
+        
+        res_surface = self.font_small.render(res_text, True, res_color)
+        screen.blit(res_surface, (x + 8, y + 48))
