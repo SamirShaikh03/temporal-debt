@@ -520,6 +520,18 @@ LEVEL_5 = LevelData(
                 'absorption_amount': 5.0
             }
         ),
+        # Phase Shifter — teleporting patrol near center
+        EntityData(
+            entity_type='phase_shifter',
+            grid_x=12,
+            grid_y=3,
+        ),
+        # Debt Leech — lurks near the exit path
+        EntityData(
+            entity_type='debt_leech',
+            grid_x=20,
+            grid_y=8,
+        ),
     ],
     par_time=40.0,
     max_debt_allowed=15.0
@@ -920,6 +932,18 @@ LEVEL_9 = LevelData(
             grid_y=11,
             properties={'fragment_id': 7}
         ),
+        # Phase Shifter in the corridor
+        EntityData(
+            entity_type='phase_shifter',
+            grid_x=14,
+            grid_y=9,
+        ),
+        # Debt Leech hidden near a danger zone
+        EntityData(
+            entity_type='debt_leech',
+            grid_x=4,
+            grid_y=10,
+        ),
     ],
     par_time=45.0,
     max_debt_allowed=16.0
@@ -1113,6 +1137,28 @@ LEVEL_10 = LevelData(
             grid_x=12,
             grid_y=2,
             properties={'fragment_id': 12}
+        ),
+        # Phase Shifters — twin teleporters flanking the center wall
+        EntityData(
+            entity_type='phase_shifter',
+            grid_x=8,
+            grid_y=7,
+        ),
+        EntityData(
+            entity_type='phase_shifter',
+            grid_x=16,
+            grid_y=7,
+        ),
+        # Debt Leeches — stationed in safe-zone corridors
+        EntityData(
+            entity_type='debt_leech',
+            grid_x=3,
+            grid_y=11,
+        ),
+        EntityData(
+            entity_type='debt_leech',
+            grid_x=21,
+            grid_y=11,
         ),
     ],
     par_time=60.0,

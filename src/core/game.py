@@ -77,7 +77,7 @@ class Game:
     
     def __init__(self):
         """Initialize the game."""
-        # Initialize pygame
+        # Initialize pygame (safe to call multiple times)
         pygame.init()
         
         # Initialize mixer with error handling (may fail in WASM)
@@ -88,12 +88,16 @@ class Game:
         
         pygame.display.set_caption(Settings.TITLE + " 2.0")
         
-        # Create display (DOUBLEBUF may cause issues in WASM, use default)
+        # Get or create display (reuses existing display if already created)
         try:
-            self.screen = pygame.display.set_mode(
-                (Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT)
-            )
-            print(f"Display initialized: {Settings.SCREEN_WIDTH}x{Settings.SCREEN_HEIGHT}")
+            self.screen = pygame.display.get_surface()
+            if self.screen is None:
+                self.screen = pygame.display.set_mode(
+                    (Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT)
+                )
+                print(f"Display initialized: {Settings.SCREEN_WIDTH}x{Settings.SCREEN_HEIGHT}")
+            else:
+                print("Reusing existing display")
         except Exception as e:
             print(f"Error initializing display: {e}")
             raise
@@ -163,6 +167,7 @@ class Game:
         self._death_timer = 0.0
         self._transition_timer = 0.0
         self._freeze_hold_time = 0.0  # Track how long freeze is held
+        self._pod_sound_cooldown = 0.0  # Cooldown for pod deposit sound
         
         # Input state
         self._space_held = False
@@ -697,6 +702,11 @@ class Game:
         # V2.0 Entity Interactions
         self._update_v2_interactions(dt)
         
+        # ============================================
+        # DANGER ZONE PUNISHMENT
+        # ============================================
+        self._update_danger_zone(dt, game_dt)
+        
         # Update HUD
         if self.hud:
             self.hud.update(dt)
@@ -716,6 +726,44 @@ class Game:
                 if self.level_manager and self.level_manager.player:
                     self.level_manager.player.die()
     
+    def _update_danger_zone(self, dt: float, game_dt: float) -> None:
+        """Punish the player while inside a danger zone (hazard tile)."""
+        if not self.level_manager or not self.level_manager.player:
+            return
+        
+        player = self.level_manager.player
+        player_rect = player.get_rect()
+        
+        in_danger = False
+        
+        # Check hazard tiles
+        for tile in getattr(self.level_manager, 'get_hazard_rects', lambda: [])():
+            if player_rect.colliderect(tile):
+                in_danger = True
+                break
+        
+        # Also treat any enemy collision zone as danger
+        # (enemies already kill the player via collision, but debt leech drains)
+        
+        # Toggle flag on player (used for visual effects)
+        if hasattr(player, '_in_danger_zone'):
+            player._in_danger_zone = in_danger
+        
+        if in_danger:
+            # Slow the player down
+            slow = getattr(Settings, 'DANGER_ZONE_SLOW_FACTOR', 0.65)
+            if hasattr(player, '_danger_slow_active'):
+                player._danger_slow_active = True
+            player.velocity = player.velocity * slow
+            
+            # Accrue extra debt
+            if self.debt_manager:
+                rate = getattr(Settings, 'DANGER_ZONE_DAMAGE_RATE', 1.5)
+                self.debt_manager.accrue_debt(rate * dt)
+        else:
+            if hasattr(player, '_danger_slow_active'):
+                player._danger_slow_active = False
+
     def _update_v2_interactions(self, dt: float) -> None:
         """Handle V2.0 entity interactions."""
         if not self.level_manager or not self.level_manager.player:
@@ -783,10 +831,8 @@ class Game:
                                 lifetime=0.3
                             )
                             # Audio feedback (throttled)
-                            if self.audio and not hasattr(self, '_pod_sound_cooldown'):
-                                self._pod_sound_cooldown = 0
                             if self.audio:
-                                self._pod_sound_cooldown = getattr(self, '_pod_sound_cooldown', 0) - dt
+                                self._pod_sound_cooldown -= dt
                                 if self._pod_sound_cooldown <= 0:
                                     self.audio.play(SoundType.POD_DEPOSIT, volume=0.5)
                                     self._pod_sound_cooldown = 0.2

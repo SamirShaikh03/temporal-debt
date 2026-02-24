@@ -58,32 +58,32 @@ class Tile:
         },
         TileType.SPAWN: {
             'solid': False,
-            'color': (50, 100, 50),
+            'color': (20, 60, 55),
             'hazard': False
         },
         TileType.EXIT: {
             'solid': False,
-            'color': COLORS.EXIT_ZONE,
+            'color': (10, 50, 35),
             'hazard': False
         },
         TileType.CHECKPOINT: {
             'solid': False,
-            'color': COLORS.CHECKPOINT,
+            'color': (40, 40, 20),
             'hazard': False
         },
         TileType.HAZARD: {
             'solid': False,
-            'color': (150, 50, 50),
+            'color': (50, 12, 18),
             'hazard': True
         },
         TileType.FLOOR_DARK: {
             'solid': False,
-            'color': (25, 25, 35),
+            'color': (10, 12, 20),
             'hazard': False
         },
         TileType.FLOOR_LIGHT: {
             'solid': False,
-            'color': (40, 40, 50),
+            'color': (20, 22, 34),
             'hazard': False
         },
     }
@@ -121,7 +121,7 @@ class Tile:
     
     def render(self, screen: pygame.Surface) -> None:
         """
-        Render the tile with enhanced visuals.
+        Render the tile with enhanced neon-abyss visuals.
         
         Args:
             screen: Surface to render to
@@ -131,44 +131,60 @@ class Tile:
         
         # Add subtle grid pattern to floors
         if not self.solid and not self.hazard:
-            # Subtle checkerboard pattern
+            # Subtle checkerboard — darker alternate squares
             if (self.grid_x + self.grid_y) % 2 == 0:
                 pattern_color = (
-                    min(255, self.color[0] + 5),
-                    min(255, self.color[1] + 5),
-                    min(255, self.color[2] + 8)
+                    min(255, self.color[0] + 3),
+                    min(255, self.color[1] + 3),
+                    min(255, self.color[2] + 6)
                 )
-                inner_rect = self.rect.inflate(-4, -4)
+                inner_rect = self.rect.inflate(-2, -2)
                 pygame.draw.rect(screen, pattern_color, inner_rect)
+            # Faint grid lines for depth
+            line_color = (
+                min(255, self.color[0] + 10),
+                min(255, self.color[1] + 10),
+                min(255, self.color[2] + 15)
+            )
+            pygame.draw.rect(screen, line_color, self.rect, 1)
         
-        # Wall rendering with 3D effect
+        # Wall rendering with polished 3D beveled edges
         if self.solid:
+            hl = getattr(COLORS, 'WALL_HIGHLIGHT', (50, 55, 80))
+            sh = getattr(COLORS, 'WALL_SHADOW', (14, 14, 28))
             # Top highlight
-            pygame.draw.line(screen, (80, 85, 100), 
-                           (self.x, self.y), 
+            pygame.draw.line(screen, hl,
+                           (self.x, self.y),
                            (self.x + Settings.TILE_SIZE - 1, self.y), 2)
             # Left highlight
-            pygame.draw.line(screen, (70, 75, 90), 
-                           (self.x, self.y), 
+            pygame.draw.line(screen, hl,
+                           (self.x, self.y),
                            (self.x, self.y + Settings.TILE_SIZE - 1), 2)
             # Bottom shadow
-            pygame.draw.line(screen, (30, 32, 45), 
-                           (self.x, self.y + Settings.TILE_SIZE - 1), 
+            pygame.draw.line(screen, sh,
+                           (self.x, self.y + Settings.TILE_SIZE - 1),
                            (self.x + Settings.TILE_SIZE - 1, self.y + Settings.TILE_SIZE - 1), 2)
             # Right shadow
-            pygame.draw.line(screen, (35, 38, 50), 
-                           (self.x + Settings.TILE_SIZE - 1, self.y), 
+            pygame.draw.line(screen, sh,
+                           (self.x + Settings.TILE_SIZE - 1, self.y),
                            (self.x + Settings.TILE_SIZE - 1, self.y + Settings.TILE_SIZE - 1), 2)
+            # Inner highlight pip for depth
+            inner = self.rect.inflate(-8, -8)
+            pygame.draw.rect(screen, (
+                min(255, self.color[0] + 6),
+                min(255, self.color[1] + 6),
+                min(255, self.color[2] + 10)
+            ), inner, 1)
         
-        # Hazard rendering with warning stripes
+        # Hazard rendering — animated danger stripes
         if self.hazard:
-            stripe_color = (200, 60, 60)
-            for i in range(0, Settings.TILE_SIZE * 2, 20):
+            danger_color = getattr(COLORS, 'DANGER_ZONE', (255, 40, 60))
+            stripe_color = (danger_color[0], danger_color[1] // 2, danger_color[2] // 2)
+            for i in range(0, Settings.TILE_SIZE * 2, 16):
                 pygame.draw.line(screen, stripe_color,
                                (self.x + i - Settings.TILE_SIZE, self.y),
                                (self.x + i, self.y + Settings.TILE_SIZE), 3)
-            # Border
-            pygame.draw.rect(screen, (255, 80, 80), self.rect, 2)
+            pygame.draw.rect(screen, danger_color, self.rect, 2)
     
     def render_highlight(self, screen: pygame.Surface, 
                         color: Tuple[int, int, int, int]) -> None:
@@ -274,6 +290,15 @@ class TileGrid:
             self._dirty = False
         
         return self._wall_rects
+    
+    def get_hazard_rects(self) -> list:
+        """Return rects for all hazard tiles (danger zones)."""
+        rects = []
+        for row in self.tiles:
+            for tile in row:
+                if tile.type == TileType.HAZARD:
+                    rects.append(tile.rect)
+        return rects
     
     def is_solid(self, grid_x: int, grid_y: int) -> bool:
         """Check if tile at position is solid."""

@@ -1,12 +1,13 @@
 """
-Menu Screens - Main menu, pause, game over, and victory screens.
+Menu Screens — Neon Abyss theme with psychological design.
 
-Menus provide navigation and state transitions outside gameplay.
+Menus use deep dark backgrounds with vibrant neon accents.
+Color psychology: cyan/teal = calm → magenta = unease → red = danger.
 
 Design Philosophy:
-- Clean, readable interfaces
-- Clear visual hierarchy
-- Consistent styling with immersive effects
+- Immersive dark atmosphere from the first pixel
+- Smooth animations telegraph interactivity
+- Consistent neon accent language
 """
 
 import pygame
@@ -20,7 +21,6 @@ from ..core.utils import get_font
 
 
 class MenuState(Enum):
-    """Current menu selection state."""
     NONE = auto()
     MAIN_MENU = auto()
     PAUSE = auto()
@@ -29,34 +29,37 @@ class MenuState(Enum):
 
 
 class Particle:
-    """Simple particle for menu background effects."""
-    def __init__(self, x: float, y: float):
+    """Neon particle for ambient menu effects."""
+    def __init__(self, x: float, y: float, color: tuple = None):
         self.x = x
         self.y = y
-        self.vx = random.uniform(-20, 20)
-        self.vy = random.uniform(-30, -10)
-        self.size = random.uniform(2, 5)
-        self.alpha = random.randint(50, 150)
-        self.lifetime = random.uniform(2, 5)
+        self.vx = random.uniform(-15, 15)
+        self.vy = random.uniform(-35, -8)
+        self.size = random.uniform(1.5, 4)
+        self.alpha = random.randint(60, 180)
+        self.lifetime = random.uniform(2.5, 6)
         self.age = 0
+        self.color = color or (0, 200, 255)
     
     def update(self, dt: float) -> bool:
         self.x += self.vx * dt
         self.y += self.vy * dt
         self.age += dt
-        self.alpha = int(150 * (1 - self.age / self.lifetime))
+        self.alpha = int(180 * (1 - self.age / self.lifetime))
         return self.age < self.lifetime
     
-    def render(self, screen: pygame.Surface, color: tuple):
+    def render(self, screen: pygame.Surface, color: tuple = None):
+        c = color or self.color
         if self.alpha > 0:
-            surf = pygame.Surface((int(self.size * 2), int(self.size * 2)), pygame.SRCALPHA)
-            pygame.draw.circle(surf, (*color[:3], self.alpha), 
-                             (int(self.size), int(self.size)), int(self.size))
-            screen.blit(surf, (int(self.x - self.size), int(self.y - self.size)))
+            sz = int(max(1, self.size * 2))
+            surf = pygame.Surface((sz, sz), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (*c[:3], max(0, min(255, self.alpha))),
+                             (sz // 2, sz // 2), max(1, sz // 2))
+            screen.blit(surf, (int(self.x - sz // 2), int(self.y - sz // 2)))
 
 
 class MenuItem:
-    """A single menu item/button with hover effects."""
+    """A single menu button with neon hover effects."""
     
     def __init__(self, text: str, action: Callable, y_position: int):
         self.text = text
@@ -64,12 +67,10 @@ class MenuItem:
         self.y = y_position
         self.selected = False
         
-        # Visual properties with better dimensions
-        self.width = 340
-        self.height = 60
+        self.width = 360
+        self.height = 56
         self.x = (Settings.SCREEN_WIDTH - self.width) // 2
         
-        # Animation
         self._hover_anim = 0.0
         self._glow_phase = random.uniform(0, math.pi * 2)
     
@@ -78,46 +79,43 @@ class MenuItem:
     
     def update(self, dt: float):
         if self.selected:
-            self._hover_anim = min(1.0, self._hover_anim + dt * 5)
+            self._hover_anim = min(1.0, self._hover_anim + dt * 6)
         else:
-            self._hover_anim = max(0.0, self._hover_anim - dt * 5)
-        self._glow_phase += dt * 2
+            self._hover_anim = max(0.0, self._hover_anim - dt * 4)
+        self._glow_phase += dt * 2.5
     
     def render(self, screen: pygame.Surface, font: pygame.font.Font) -> None:
         rect = self.get_rect()
-        
-        # Calculate glow
         glow = (math.sin(self._glow_phase) + 1) / 2
         
-        # Background with animation
         if self.selected:
-            # Animated gradient effect
-            base_color = (
-                int(60 + 40 * glow),
-                int(100 + 50 * glow),
-                int(180 + 40 * glow)
-            )
-            pygame.draw.rect(screen, base_color, rect, border_radius=8)
+            # Neon glow border
+            glow_rect = rect.inflate(6 + int(4 * glow), 6 + int(4 * glow))
+            glow_surf = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
+            accent = getattr(COLORS, 'MENU_ACCENT', (0, 200, 255))
+            pygame.draw.rect(glow_surf, (*accent, int(40 + 30 * glow)),
+                           (0, 0, glow_rect.width, glow_rect.height), border_radius=10)
+            screen.blit(glow_surf, glow_rect.topleft)
             
-            # Glow border
-            glow_rect = rect.inflate(4 + int(4 * glow), 4 + int(4 * glow))
-            pygame.draw.rect(screen, (100, 180, 255, 100), glow_rect, 
-                           width=2, border_radius=10)
+            # Filled bg with accent tint
+            bg_color = (
+                int(15 + 25 * glow),
+                int(35 + 40 * glow),
+                int(60 + 50 * glow)
+            )
+            pygame.draw.rect(screen, bg_color, rect, border_radius=8)
+            pygame.draw.rect(screen, accent, rect, width=2, border_radius=8)
             text_color = COLORS.WHITE
         else:
-            # Normal state
-            pygame.draw.rect(screen, (40, 45, 55), rect, border_radius=8)
-            pygame.draw.rect(screen, (60, 65, 75), rect, width=2, border_radius=8)
-            text_color = (180, 185, 195)
-        
-        # Border
-        pygame.draw.rect(screen, (100, 105, 115) if not self.selected else (150, 200, 255),
-                        rect, width=2, border_radius=8)
+            # Muted background
+            pygame.draw.rect(screen, (18, 22, 35), rect, border_radius=8)
+            pygame.draw.rect(screen, (40, 48, 65), rect, width=1, border_radius=8)
+            text_color = getattr(COLORS, 'MENU_TEXT_DIM', (100, 110, 130))
         
         # Text with subtle shadow
         if self.selected:
-            shadow = font.render(self.text, True, (20, 30, 50))
-            screen.blit(shadow, (rect.centerx - shadow.get_width() // 2 + 2, 
+            shadow = font.render(self.text, True, (5, 10, 20))
+            screen.blit(shadow, (rect.centerx - shadow.get_width() // 2 + 2,
                                 rect.centery - shadow.get_height() // 2 + 2))
         
         text_surface = font.render(self.text, True, text_color)
@@ -126,35 +124,39 @@ class MenuItem:
 
 
 class BaseMenu:
-    """Base class for all menu screens."""
+    """Base class for all menu screens — neon abyss theme."""
     
     def __init__(self):
         pygame.font.init()
         self.font_title = get_font('Segoe UI', 72, bold=True)
-        self.font_large = get_font('Segoe UI', 32)
-        self.font_medium = get_font('Segoe UI', 26)
-        self.font_small = get_font('Segoe UI', 20)
+        self.font_large = get_font('Segoe UI', 30)
+        self.font_medium = get_font('Segoe UI', 24)
+        self.font_small = get_font('Segoe UI', 18)
         
         self.items: List[MenuItem] = []
         self.selected_index = 0
         
-        # Background particles
         self.particles: List[Particle] = []
         self._particle_timer = 0
     
     def update(self, dt: float):
-        # Update particles
         self._particle_timer += dt
-        if self._particle_timer > 0.1:
+        if self._particle_timer > 0.08:
             self._particle_timer = 0
+            # Spawn particles with neon colors
+            color_choices = [
+                getattr(COLORS, 'MENU_ACCENT', (0, 200, 255)),
+                getattr(COLORS, 'MENU_ACCENT2', (220, 50, 255)),
+                (0, 180, 180),
+            ]
             self.particles.append(Particle(
                 random.uniform(0, Settings.SCREEN_WIDTH),
-                Settings.SCREEN_HEIGHT + 10
+                Settings.SCREEN_HEIGHT + 10,
+                color=random.choice(color_choices)
             ))
         
         self.particles = [p for p in self.particles if p.update(dt)]
         
-        # Update menu items
         for item in self.items:
             item.update(dt)
     
@@ -204,32 +206,33 @@ class BaseMenu:
                 return item.action()
         return None
     
-    def _render_background(self, screen: pygame.Surface, color: tuple = (15, 18, 28)):
-        screen.fill(color)
+    def _render_background(self, screen: pygame.Surface, color: tuple = None):
+        bg = color or getattr(COLORS, 'MENU_BG', (8, 10, 20))
+        screen.fill(bg)
         
-        # Render grid pattern
-        grid_color = (25, 28, 38)
+        # Subtle grid
+        grid_color = getattr(COLORS, 'MENU_GRID', (18, 22, 40))
         for x in range(0, Settings.SCREEN_WIDTH, 64):
             pygame.draw.line(screen, grid_color, (x, 0), (x, Settings.SCREEN_HEIGHT))
         for y in range(0, Settings.SCREEN_HEIGHT, 64):
             pygame.draw.line(screen, grid_color, (0, y), (Settings.SCREEN_WIDTH, y))
         
-        # Render particles
+        # Particles
         for p in self.particles:
-            p.render(screen, (80, 120, 200))
+            p.render(screen)
     
     def render(self, screen: pygame.Surface) -> None:
         pass
 
 
 class MainMenu(BaseMenu):
-    """Main menu screen with immersive visuals."""
+    """Main menu — immersive neon abyss intro."""
     
     def __init__(self):
         super().__init__()
         
-        start_y = 390
-        spacing = 80  # Better vertical spacing between items
+        start_y = 400
+        spacing = 75
         
         self.items = [
             MenuItem("START GAME", lambda: "start", start_y),
@@ -238,98 +241,127 @@ class MainMenu(BaseMenu):
         ]
         self.items[0].selected = True
         
-        # Animation state
         self._title_time = 0.0
         self._subtitle_alpha = 0
         
     def update(self, dt: float) -> None:
         super().update(dt)
         self._title_time += dt
-        self._subtitle_alpha = min(255, self._subtitle_alpha + int(dt * 200))
+        self._subtitle_alpha = min(255, self._subtitle_alpha + int(dt * 150))
     
     def render(self, screen: pygame.Surface) -> None:
         self._render_background(screen)
         
-        # Animated title
-        time = self._title_time
+        t = self._title_time
+        accent = getattr(COLORS, 'MENU_ACCENT', (0, 200, 255))
+        accent2 = getattr(COLORS, 'MENU_ACCENT2', (220, 50, 255))
         
-        # Title glow effect
-        glow = (math.sin(time * 2) + 1) / 2
+        # Animated vignette overlay
+        vig = pygame.Surface((Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT), pygame.SRCALPHA)
+        pulse = (math.sin(t * 0.8) + 1) / 2
+        vig_alpha = int(30 + 20 * pulse)
+        cx, cy = Settings.SCREEN_WIDTH // 2, Settings.SCREEN_HEIGHT // 2
+        for ring in range(3):
+            radius = 300 + ring * 150
+            pygame.draw.circle(vig, (*accent[:3], max(0, vig_alpha - ring * 10)),
+                             (cx, cy), radius, 2)
+        screen.blit(vig, (0, 0))
+        
+        # Title glow
+        glow = (math.sin(t * 2) + 1) / 2
         title_color = (
-            int(80 + 100 * glow),
-            int(150 + 80 * glow),
-            255
+            int(lerp_val(accent[0], accent2[0], glow)),
+            int(lerp_val(accent[1], accent2[1], glow)),
+            int(lerp_val(accent[2], accent2[2], glow))
         )
         
-        # Render title with layered glow
         title_text = "TEMPORAL DEBT"
         
-        # Glow layers
-        for i in range(3, 0, -1):
-            glow_surface = self.font_title.render(title_text, True, 
-                                                  (40, 80, 150, 50 // i))
-            glow_rect = glow_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2 + i, 
-                                             top=90 + i)
-            screen.blit(glow_surface, glow_rect)
+        # Chromatic aberration on title — red/blue offset
+        red_surf = self.font_title.render(title_text, True, (255, 40, 80))
+        blue_surf = self.font_title.render(title_text, True, (40, 80, 255))
+        main_surf = self.font_title.render(title_text, True, title_color)
         
-        # Main title with better positioning
-        title_surface = self.font_title.render(title_text, True, title_color)
-        title_rect = title_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=80)
-        screen.blit(title_surface, title_rect)
+        title_x = Settings.SCREEN_WIDTH // 2 - main_surf.get_width() // 2
+        title_y = 75
         
-        # Subtitle with improved spacing
+        # Offset layers
+        offset = int(2 + 1 * glow)
+        red_alpha = pygame.Surface(red_surf.get_size(), pygame.SRCALPHA)
+        red_alpha.blit(red_surf, (0, 0))
+        red_alpha.set_alpha(80)
+        blue_alpha = pygame.Surface(blue_surf.get_size(), pygame.SRCALPHA)
+        blue_alpha.blit(blue_surf, (0, 0))
+        blue_alpha.set_alpha(80)
+        
+        screen.blit(red_alpha, (title_x - offset, title_y))
+        screen.blit(blue_alpha, (title_x + offset, title_y))
+        screen.blit(main_surf, (title_x, title_y))
+        
+        # Subtitle — psychological hook
         subtitle = "Time is a loan you cannot afford."
         if self._subtitle_alpha > 0:
-            sub_surface = self.font_medium.render(subtitle, True, 
-                                                  (150, 155, 170, self._subtitle_alpha))
-            sub_rect = sub_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=170)
-            screen.blit(sub_surface, sub_rect)
+            sub_alpha = min(255, self._subtitle_alpha)
+            sub_surf = self.font_medium.render(subtitle, True,
+                                               (150, 160, 180))
+            sub_surf.set_alpha(sub_alpha)
+            sub_rect = sub_surf.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=165)
+            screen.blit(sub_surf, sub_rect)
         
-        # Decorative line with better margin
-        line_y = 215
-        line_width = 420  # Slightly wider for better balance
-        pygame.draw.line(screen, (60, 100, 180), 
-                        (Settings.SCREEN_WIDTH // 2 - line_width // 2, line_y),
-                        (Settings.SCREEN_WIDTH // 2 + line_width // 2, line_y), 2)
+        # Decorative neon line
+        line_y = 205
+        line_w = 450
+        line_start = Settings.SCREEN_WIDTH // 2 - line_w // 2
+        line_end = Settings.SCREEN_WIDTH // 2 + line_w // 2
+        pygame.draw.line(screen, accent, (line_start, line_y), (line_end, line_y), 2)
+        # Glow dot at center
+        pygame.draw.circle(screen, accent, (Settings.SCREEN_WIDTH // 2, line_y), 4)
         
-        # Feature highlights with improved spacing
+        # Feature highlights with neon bullets
         features = [
-            "FREEZE TIME - But every second borrowed accrues debt",
-            "DEBT TIERS - Higher debt = faster, more dangerous world",
-            "TIME ANCHORS - Place checkpoints, recall at a cost"
+            ("FREEZE TIME", "Every second borrowed accrues deadly DEBT"),
+            ("DEBT TIERS", "Higher debt = faster, deadlier world"),
+            ("DANGER ZONES", "Touch them and enemies will punish you"),
         ]
         
-        feature_spacing = 32  # Better line spacing for readability
-        for i, feature in enumerate(features):
-            color = (100, 120, 150) if i % 2 == 0 else (90, 110, 140)
-            feat_surface = self.font_small.render(feature, True, color)
-            feat_rect = feat_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, 
-                                             top=250 + i * feature_spacing)
-            screen.blit(feat_surface, feat_rect)
+        fy = 230
+        for i, (key, desc) in enumerate(features):
+            # Neon bullet
+            bullet_color = accent if i % 2 == 0 else accent2
+            pygame.draw.circle(screen, bullet_color,
+                             (Settings.SCREEN_WIDTH // 2 - 250, fy + 10), 4)
+            key_surf = self.font_small.render(key, True, bullet_color)
+            screen.blit(key_surf, (Settings.SCREEN_WIDTH // 2 - 238, fy))
+            desc_surf = self.font_small.render(f"  —  {desc}", True, (100, 110, 140))
+            screen.blit(desc_surf, (Settings.SCREEN_WIDTH // 2 - 238 + key_surf.get_width(), fy))
+            fy += 35
         
         # Menu items
         for item in self.items:
             item.render(screen, self.font_large)
         
-        # Controls hint
-        hint = "Use WASD to navigate, ENTER to select"
-        hint_surface = self.font_small.render(hint, True, (80, 85, 95))
-        screen.blit(hint_surface, (20, Settings.SCREEN_HEIGHT - 30))
+        # Bottom hint
+        hint = "WASD to navigate  ·  ENTER to select"
+        hint_surf = self.font_small.render(hint, True, (60, 65, 80))
+        screen.blit(hint_surf, (20, Settings.SCREEN_HEIGHT - 28))
         
-        # Version
-        version = "v1.0.0"
-        ver_surface = self.font_small.render(version, True, (60, 65, 75))
-        screen.blit(ver_surface, (Settings.SCREEN_WIDTH - 70, Settings.SCREEN_HEIGHT - 30))
+        version = "v3.0"
+        ver_surf = self.font_small.render(version, True, (50, 55, 70))
+        screen.blit(ver_surf, (Settings.SCREEN_WIDTH - 60, Settings.SCREEN_HEIGHT - 28))
+
+
+def lerp_val(a: float, b: float, t: float) -> float:
+    return a + (b - a) * t
 
 
 class PauseMenu(BaseMenu):
-    """Pause menu overlay with blur effect."""
+    """Pause menu overlay with dark neon aesthetic."""
     
     def __init__(self):
         super().__init__()
         
-        center_y = Settings.SCREEN_HEIGHT // 2 + 10  # Slightly lower for better balance
-        spacing = 75  # Better spacing between menu items
+        center_y = Settings.SCREEN_HEIGHT // 2 + 10
+        spacing = 72
         
         self.items = [
             MenuItem("RESUME", lambda: "resume", center_y - spacing),
@@ -344,49 +376,45 @@ class PauseMenu(BaseMenu):
         self._anim_time += dt
     
     def render(self, screen: pygame.Surface) -> None:
-        # Dark overlay with gradient
         overlay = pygame.Surface((Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((10, 15, 25, 200))
+        overlay.fill((6, 8, 16, 210))
         screen.blit(overlay, (0, 0))
         
-        # Title with glow
+        accent = getattr(COLORS, 'MENU_ACCENT', (0, 200, 255))
         glow = (math.sin(self._anim_time * 3) + 1) / 2
         title_color = (
-            int(150 + 50 * glow),
-            int(180 + 50 * glow),
-            255
+            int(accent[0] * (0.6 + 0.4 * glow)),
+            int(accent[1] * (0.6 + 0.4 * glow)),
+            int(accent[2] * (0.6 + 0.4 * glow))
         )
         
         title_surface = self.font_title.render("PAUSED", True, title_color)
         title_rect = title_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=120)
         screen.blit(title_surface, title_rect)
         
-        # Decorative line with better spacing
         line_y = 205
-        pygame.draw.line(screen, (60, 80, 120),
+        pygame.draw.line(screen, accent,
                         (Settings.SCREEN_WIDTH // 2 - 150, line_y),
                         (Settings.SCREEN_WIDTH // 2 + 150, line_y), 2)
         
-        # Menu items
         for item in self.items:
             item.render(screen, self.font_large)
         
-        # Hint
         hint = "Press ESC to resume"
-        hint_surface = self.font_small.render(hint, True, (100, 105, 120))
-        hint_rect = hint_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, 
+        hint_surface = self.font_small.render(hint, True, (80, 85, 100))
+        hint_rect = hint_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2,
                                          bottom=Settings.SCREEN_HEIGHT - 30)
         screen.blit(hint_surface, hint_rect)
 
 
 class GameOverScreen(BaseMenu):
-    """Game over screen with dramatic visuals."""
+    """Game over screen — dramatic neon-red glitch aesthetic."""
     
     def __init__(self):
         super().__init__()
         
-        center_y = Settings.SCREEN_HEIGHT // 2 + 70  # Better vertical positioning
-        spacing = 75  # Consistent spacing with other menus
+        center_y = Settings.SCREEN_HEIGHT // 2 + 70
+        spacing = 75
         
         self.items = [
             MenuItem("TRY AGAIN", lambda: "restart", center_y),
@@ -405,64 +433,67 @@ class GameOverScreen(BaseMenu):
         self._anim_time += dt
     
     def render(self, screen: pygame.Surface) -> None:
-        # Red-tinted overlay
+        # Deep red-magenta overlay
         overlay = pygame.Surface((Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT), pygame.SRCALPHA)
-        
-        # Gradient red background
         pulse = (math.sin(self._anim_time * 2) + 1) / 2
-        overlay.fill((int(60 + 30 * pulse), 10, 15, 220))
+        overlay.fill((int(40 + 30 * pulse), 5, int(15 + 10 * pulse), 225))
         screen.blit(overlay, (0, 0))
         
-        # Vignette effect
-        for i in range(5):
-            vign_rect = pygame.Rect(i * 20, i * 20, 
-                                   Settings.SCREEN_WIDTH - i * 40,
-                                   Settings.SCREEN_HEIGHT - i * 40)
-            pygame.draw.rect(overlay, (40, 0, 0, 40 - i * 8), vign_rect, width=20)
-        screen.blit(overlay, (0, 0))
+        # Scan lines effect
+        scan = pygame.Surface((Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT), pygame.SRCALPHA)
+        for y in range(0, Settings.SCREEN_HEIGHT, 3):
+            pygame.draw.line(scan, (0, 0, 0, 30), (0, y), (Settings.SCREEN_WIDTH, y))
+        screen.blit(scan, (0, 0))
         
-        # Glitchy title effect
+        # Glitchy title
         title_text = "GAME OVER"
         
-        # Glitch offset
-        if random.random() < 0.1:
-            offset = random.randint(-5, 5)
-        else:
-            offset = 0
+        # Chromatic aberration — offset increases with pulse
+        offset = int(3 + 4 * pulse)
+        if random.random() < 0.08:
+            offset += random.randint(-8, 8)
         
-        # Red channel offset (chromatic aberration)
-        red_surface = self.font_title.render(title_text, True, (255, 50, 50))
-        screen.blit(red_surface, (Settings.SCREEN_WIDTH // 2 - red_surface.get_width() // 2 - 3 + offset, 117))
+        red_surf = self.font_title.render(title_text, True, (255, 30, 60))
+        blue_surf = self.font_title.render(title_text, True, (60, 30, 255))
+        main_surf = self.font_title.render(title_text, True, (255, 180, 180))
         
-        # Main title with better positioning
-        title_surface = self.font_title.render(title_text, True, (255, 200, 200))
-        title_rect = title_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=110)
-        screen.blit(title_surface, title_rect)
+        tx = Settings.SCREEN_WIDTH // 2 - main_surf.get_width() // 2
+        ty = 100
         
-        # Death message with improved spacing
-        msg_surface = self.font_medium.render(self.death_message, True, (255, 150, 150))
-        msg_rect = msg_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=205)
-        screen.blit(msg_surface, msg_rect)
+        red_a = pygame.Surface(red_surf.get_size(), pygame.SRCALPHA)
+        red_a.blit(red_surf, (0, 0))
+        red_a.set_alpha(100)
+        blue_a = pygame.Surface(blue_surf.get_size(), pygame.SRCALPHA)
+        blue_a.blit(blue_surf, (0, 0))
+        blue_a.set_alpha(80)
         
-        # Warning symbol with better margin
-        warning = "⚠ TEMPORAL COLLAPSE ⚠"
-        warn_surface = self.font_small.render(warning, True, (180, 80, 80))
-        warn_rect = warn_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=250)
-        screen.blit(warn_surface, warn_rect)
+        screen.blit(red_a, (tx - offset, ty))
+        screen.blit(blue_a, (tx + offset, ty))
+        screen.blit(main_surf, (tx, ty))
         
-        # Menu items
+        # Death message
+        msg_surf = self.font_medium.render(self.death_message, True, (255, 120, 120))
+        msg_rect = msg_surf.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=195)
+        screen.blit(msg_surf, msg_rect)
+        
+        # Warning
+        warning = "TEMPORAL COLLAPSE"
+        warn_surf = self.font_small.render(warning, True, (180, 50, 60))
+        warn_rect = warn_surf.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=240)
+        screen.blit(warn_surf, warn_rect)
+        
         for item in self.items:
             item.render(screen, self.font_large)
 
 
 class VictoryScreen(BaseMenu):
-    """Victory/level complete screen with celebration effects."""
+    """Victory screen — neon-cyan celebration with particle fireworks."""
     
     def __init__(self):
         super().__init__()
         
-        center_y = Settings.SCREEN_HEIGHT // 2 + 110  # Better positioning
-        spacing = 75  # Consistent spacing
+        center_y = Settings.SCREEN_HEIGHT // 2 + 110
+        spacing = 75
         
         self.items = [
             MenuItem("NEXT LEVEL", lambda: "next_level", center_y),
@@ -476,7 +507,6 @@ class VictoryScreen(BaseMenu):
         self.is_final_level = False
         self._anim_time = 0.0
         
-        # Celebration particles
         self._celebration_particles: List[Particle] = []
     
     def set_stats(self, level_name: str, time: float, debt: float, is_final: bool = False):
@@ -490,85 +520,100 @@ class VictoryScreen(BaseMenu):
                                     Settings.SCREEN_HEIGHT // 2 + 100)
             self.items[0].selected = True
         
-        # Spawn celebration particles
-        for _ in range(30):
-            self._celebration_particles.append(Particle(
-                random.uniform(100, Settings.SCREEN_WIDTH - 100),
-                Settings.SCREEN_HEIGHT + 50
-            ))
+        # Spawn multi-colored celebration particles
+        celebration_colors = [
+            getattr(COLORS, 'MENU_ACCENT', (0, 200, 255)),
+            getattr(COLORS, 'MENU_ACCENT2', (220, 50, 255)),
+            (0, 255, 180),
+            (255, 220, 50),
+        ]
+        for _ in range(40):
+            p = Particle(
+                random.uniform(80, Settings.SCREEN_WIDTH - 80),
+                Settings.SCREEN_HEIGHT + 50,
+                color=random.choice(celebration_colors),
+            )
+            self._celebration_particles.append(p)
     
     def update(self, dt: float):
         super().update(dt)
         self._anim_time += dt
         
-        # Update celebration particles
         self._celebration_particles = [p for p in self._celebration_particles if p.update(dt)]
         
-        # Spawn more particles occasionally
-        if random.random() < 0.1:
+        if random.random() < 0.15:
+            celebration_colors = [
+                getattr(COLORS, 'MENU_ACCENT', (0, 200, 255)),
+                getattr(COLORS, 'MENU_ACCENT2', (220, 50, 255)),
+                (0, 255, 180),
+            ]
             self._celebration_particles.append(Particle(
-                random.uniform(100, Settings.SCREEN_WIDTH - 100),
-                Settings.SCREEN_HEIGHT + 50
+                random.uniform(80, Settings.SCREEN_WIDTH - 80),
+                Settings.SCREEN_HEIGHT + 50,
+                color=random.choice(celebration_colors),
             ))
     
     def render(self, screen: pygame.Surface) -> None:
-        # Green-tinted overlay
+        # Deep teal overlay
         overlay = pygame.Surface((Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((10, 40, 20, 210))
+        overlay.fill((6, 25, 30, 215))
         screen.blit(overlay, (0, 0))
         
         # Celebration particles
         for p in self._celebration_particles:
-            p.render(screen, (100, 255, 150))
+            p.render(screen)
         
-        # Title with glow
+        # Title with pulsing glow
         glow = (math.sin(self._anim_time * 3) + 1) / 2
         title_text = "GAME COMPLETE!" if self.is_final_level else "LEVEL COMPLETE!"
+        accent = getattr(COLORS, 'MENU_ACCENT', (0, 200, 255))
         title_color = (
-            int(100 + 50 * glow),
-            int(255),
-            int(150 + 50 * glow)
+            int(accent[0] * 0.5 + accent[0] * 0.5 * glow),
+            int(min(255, accent[1] + 40 * glow)),
+            int(min(255, accent[2] + 30 * glow)),
         )
         
         title_surface = self.font_title.render(title_text, True, title_color)
         title_rect = title_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=70)
         screen.blit(title_surface, title_rect)
         
-        # Level name with better spacing
-        name_surface = self.font_large.render(self.level_name, True, (220, 255, 220))
+        # Level name
+        name_surface = self.font_large.render(self.level_name, True, (200, 240, 255))
         name_rect = name_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=155)
         screen.blit(name_surface, name_rect)
         
-        # Stats box with improved dimensions and positioning
-        stats_box = pygame.Rect(Settings.SCREEN_WIDTH // 2 - 220, 205, 440, 110)
-        pygame.draw.rect(screen, (20, 60, 30), stats_box, border_radius=10)
-        pygame.draw.rect(screen, (80, 180, 100), stats_box, width=2, border_radius=10)
+        # Stats box
+        stats_box = pygame.Rect(Settings.SCREEN_WIDTH // 2 - 230, 200, 460, 120)
+        pygame.draw.rect(screen, (12, 30, 40), stats_box, border_radius=12)
+        pygame.draw.rect(screen, accent, stats_box, width=2, border_radius=12)
         
-        # Time stat with better padding
+        # Inner glow line at top of stats box
+        glow_rect = pygame.Rect(stats_box.x + 2, stats_box.y + 2, stats_box.width - 4, 2)
+        glow_surf = pygame.Surface((glow_rect.width, 2), pygame.SRCALPHA)
+        glow_surf.fill((*accent, 120))
+        screen.blit(glow_surf, glow_rect.topleft)
+        
         time_text = f"Completion Time: {self.completion_time:.1f}s"
-        time_surface = self.font_medium.render(time_text, True, (200, 255, 200))
-        time_rect = time_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=228)
+        time_surface = self.font_medium.render(time_text, True, (180, 230, 255))
+        time_rect = time_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=225)
         screen.blit(time_surface, time_rect)
         
-        # Debt stat with improved spacing
-        debt_color = (255, 200, 100) if self.total_debt > 5 else (150, 255, 150)
+        debt_color = (255, 180, 80) if self.total_debt > 5 else (100, 255, 200)
         debt_text = f"Total Debt Incurred: {self.total_debt:.1f}s"
         debt_surface = self.font_medium.render(debt_text, True, debt_color)
-        debt_rect = debt_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=268)
+        debt_rect = debt_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=270)
         screen.blit(debt_surface, debt_rect)
         
-        # Menu items
         for item in self.items:
             item.render(screen, self.font_large)
 
 
 class ControlsScreen(BaseMenu):
-    """Full-screen controls display accessible from main menu."""
+    """Full-screen controls — neon-styled keybinding reference."""
     
     def __init__(self):
         super().__init__()
         
-        # Back button at the bottom
         self.items = [
             MenuItem("BACK", lambda: "back", Settings.SCREEN_HEIGHT - 100),
         ]
@@ -576,30 +621,27 @@ class ControlsScreen(BaseMenu):
         
         self._anim_time = 0.0
         
-        # All controls to display
         self.controls = [
             ('WASD / Arrows', 'Move your character'),
-            ('SPACE (hold)', 'Freeze time - but accumulates debt!'),
+            ('SPACE (hold)', 'Freeze time — accumulates debt!'),
             ('Q', 'Place a Time Anchor checkpoint'),
-            ('E', 'Recall to your nearest anchor (costs 2s debt)'),
+            ('E', 'Recall to nearest anchor (costs debt)'),
             ('C', 'Spawn Chrono-Clone (replays your path)'),
-            ('R', 'Time Rewind (limited uses, costs debt)'),
+            ('R', 'Time Rewind (limited uses)'),
             ('B', 'Fragment Burst (5 fragments = slow-mo)'),
             ('F (hold)', 'Interact with Debt Transfer Pods'),
             ('ESC', 'Pause the game'),
         ]
         
-        # Tips section
         self.tips = [
             "Higher debt = faster, more dangerous world",
             "Temporal Hunters only move when time is frozen!",
             "Stay moving to build Momentum (reduces debt rate)",
             "Chrono-Clones distract enemies and trigger plates",
-            "Collect 5 Temporal Fragments for slow-mo burst!",
+            "Avoid Debt Leeches — they drain your time silently",
         ]
     
     def handle_input(self, event: pygame.event.Event) -> Optional[str]:
-        """Handle input - also allow ESC to go back."""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 return "back"
@@ -612,70 +654,75 @@ class ControlsScreen(BaseMenu):
     def render(self, screen: pygame.Surface) -> None:
         self._render_background(screen)
         
-        # Title with glow effect
+        accent = getattr(COLORS, 'MENU_ACCENT', (0, 200, 255))
+        accent2 = getattr(COLORS, 'MENU_ACCENT2', (220, 50, 255))
+        
+        # Title
         glow = (math.sin(self._anim_time * 2) + 1) / 2
         title_color = (
-            int(100 + 80 * glow),
-            int(160 + 60 * glow),
-            255
+            int(accent[0] * 0.6 + accent[0] * 0.4 * glow),
+            int(min(255, accent[1] + 30 * glow)),
+            int(min(255, accent[2] + 20 * glow)),
         )
-        
         title_surface = self.font_title.render("CONTROLS", True, title_color)
-        title_rect = title_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=50)
+        title_rect = title_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=45)
         screen.blit(title_surface, title_rect)
         
-        # Decorative line
-        line_y = 130
-        line_width = 400
-        pygame.draw.line(screen, (60, 100, 180),
-                        (Settings.SCREEN_WIDTH // 2 - line_width // 2, line_y),
-                        (Settings.SCREEN_WIDTH // 2 + line_width // 2, line_y), 2)
+        # Accent line under title
+        line_y = 125
+        line_hw = 200
+        cx = Settings.SCREEN_WIDTH // 2
+        for i in range(3):
+            a = max(0, 180 - i * 60)
+            col = (*accent[:3], a) if len(accent) >= 3 else (0, 200, 255, a)
+            line_surf = pygame.Surface((line_hw * 2 + i * 40, 1), pygame.SRCALPHA)
+            line_surf.fill(col)
+            screen.blit(line_surf, (cx - line_hw - i * 20, line_y + i))
         
         # Controls section
-        section_x = Settings.SCREEN_WIDTH // 2
-        y_offset = 165
+        y_offset = 155
         
         for key, desc in self.controls:
-            # Key box
-            key_surface = self.font_medium.render(key, True, (180, 200, 255))
-            key_rect = pygame.Rect(section_x - 280, y_offset - 4, 160, 36)
-            pygame.draw.rect(screen, (40, 50, 70), key_rect, border_radius=6)
-            pygame.draw.rect(screen, (80, 100, 140), key_rect, width=2, border_radius=6)
+            # Key badge
+            key_surf = self.font_medium.render(key, True, accent)
+            badge_w = max(160, key_surf.get_width() + 24)
+            key_rect = pygame.Rect(cx - 290, y_offset - 4, badge_w, 34)
+            pygame.draw.rect(screen, (18, 22, 40), key_rect, border_radius=6)
+            pygame.draw.rect(screen, (*accent[:3], 120) if len(accent) >= 3 else (0, 200, 255, 120),
+                           key_rect, width=1, border_radius=6)
             
-            key_text_rect = key_surface.get_rect(center=key_rect.center)
-            screen.blit(key_surface, key_text_rect)
+            key_text_rect = key_surf.get_rect(center=key_rect.center)
+            screen.blit(key_surf, key_text_rect)
             
             # Description
-            desc_surface = self.font_medium.render(desc, True, (180, 185, 200))
-            screen.blit(desc_surface, (section_x - 100, y_offset))
+            desc_surface = self.font_medium.render(desc, True, (160, 170, 190))
+            screen.blit(desc_surface, (cx - 105, y_offset + 2))
             
-            y_offset += 48
+            y_offset += 45
         
         # Tips section
-        tips_y = y_offset + 30
-        tips_title = self.font_large.render("TIPS", True, (100, 180, 255))
-        tips_rect = tips_title.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=tips_y)
+        tips_y = y_offset + 20
+        tips_title = self.font_large.render("TIPS", True, accent2)
+        tips_rect = tips_title.get_rect(centerx=cx, top=tips_y)
         screen.blit(tips_title, tips_rect)
         
-        pygame.draw.line(screen, (50, 80, 140),
-                        (Settings.SCREEN_WIDTH // 2 - 100, tips_y + 40),
-                        (Settings.SCREEN_WIDTH // 2 + 100, tips_y + 40), 1)
+        # Accent line under tips
+        line_surf2 = pygame.Surface((140, 1), pygame.SRCALPHA)
+        line_surf2.fill((*accent2[:3], 100) if len(accent2) >= 3 else (220, 50, 255, 100))
+        screen.blit(line_surf2, (cx - 70, tips_y + 38))
         
-        tips_y += 55
+        tips_y += 50
         for tip in self.tips:
-            bullet = "• " + tip
-            tip_surface = self.font_small.render(bullet, True, (140, 150, 170))
-            tip_rect = tip_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2, top=tips_y)
+            bullet = "> " + tip
+            tip_surface = self.font_small.render(bullet, True, (120, 130, 160))
+            tip_rect = tip_surface.get_rect(centerx=cx, top=tips_y)
             screen.blit(tip_surface, tip_rect)
             tips_y += 28
         
-        # Back button
         for item in self.items:
             item.render(screen, self.font_large)
         
-        # Hint
         hint = "Press ESC or click BACK to return"
-        hint_surface = self.font_small.render(hint, True, (80, 85, 95))
-        hint_rect = hint_surface.get_rect(centerx=Settings.SCREEN_WIDTH // 2,
-                                         bottom=Settings.SCREEN_HEIGHT - 20)
+        hint_surface = self.font_small.render(hint, True, (60, 65, 80))
+        hint_rect = hint_surface.get_rect(centerx=cx, bottom=Settings.SCREEN_HEIGHT - 20)
         screen.blit(hint_surface, hint_rect)

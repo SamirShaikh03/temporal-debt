@@ -1,6 +1,13 @@
 """
 Global game configuration and constants.
 All tunable parameters are centralized here for easy balancing.
+
+TEMPORAL DEBT 3.0 — Psychological Horror / Neon Abyss Theme
+Color Psychology:
+  - Deep blacks and dark cyans create unease
+  - Pulsing magentas/reds signal danger subconsciously
+  - Cool teal calms — then is ripped away during debt spikes
+  - Gold accents feel "earned" — anchors, rewards
 """
 
 
@@ -11,7 +18,7 @@ class Settings:
     Design Philosophy:
     - All magic numbers are named constants
     - Related settings are grouped logically
-    - Comments explain the design intent
+    - Difficulty tuned 30-40 % harder than v2
     """
     
     # ===================
@@ -22,225 +29,239 @@ class Settings:
     FPS = 60
     TITLE = "TEMPORAL DEBT"
     
-    # Tile size affects level design granularity
-    TILE_SIZE = 48  # Smaller tiles for bigger levels
-    
-    # Grid dimensions for level design
-    GRID_WIDTH = SCREEN_WIDTH // TILE_SIZE  # ~26 tiles
-    GRID_HEIGHT = SCREEN_HEIGHT // TILE_SIZE  # ~15 tiles (with HUD space)
+    TILE_SIZE = 48
+    GRID_WIDTH = SCREEN_WIDTH // TILE_SIZE
+    GRID_HEIGHT = SCREEN_HEIGHT // TILE_SIZE
     
     # ===================
-    # TIME SYSTEM SETTINGS
+    # TIME SYSTEM SETTINGS  (+35 % harder)
     # ===================
     
-    # Debt accrual: 1 second frozen = 1.5 seconds of debt
-    # This creates the "interest" feeling - you always owe more than you borrowed
-    DEBT_ACCRUAL_RATE = 1.5
+    # Debt accrues faster — every second frozen costs 2.0s (was 1.5)
+    DEBT_ACCRUAL_RATE = 2.0
     
-    # Debt tiers define escalating consequences
-    # Structure: (max_debt, interest_rate, world_speed, color_intensity)
+    # Tightened tier thresholds and harsher multipliers
     DEBT_TIERS = {
-        0: {"name": "clear", "max_debt": 0, "interest": 1.0, "speed": 1.0, "tint": (0, 0, 0)},
-        1: {"name": "mild", "max_debt": 3, "interest": 1.0, "speed": 1.0, "tint": (0, 0, 0)},
-        2: {"name": "moderate", "max_debt": 6, "interest": 1.25, "speed": 1.5, "tint": (50, 0, 0)},
-        3: {"name": "severe", "max_debt": 10, "interest": 1.5, "speed": 2.0, "tint": (100, 20, 0)},
-        4: {"name": "critical", "max_debt": 15, "interest": 2.0, "speed": 3.0, "tint": (150, 40, 0)},
-        5: {"name": "bankruptcy", "max_debt": 20, "interest": 3.0, "speed": 4.0, "tint": (200, 60, 0)},
+        0: {"name": "clear",      "max_debt": 0,  "interest": 1.0,  "speed": 1.0,  "tint": (0, 0, 0)},
+        1: {"name": "mild",       "max_debt": 2,  "interest": 1.1,  "speed": 1.15, "tint": (0, 10, 20)},
+        2: {"name": "moderate",   "max_debt": 4,  "interest": 1.4,  "speed": 1.7,  "tint": (40, 0, 30)},
+        3: {"name": "severe",     "max_debt": 7,  "interest": 1.8,  "speed": 2.4,  "tint": (100, 10, 40)},
+        4: {"name": "critical",   "max_debt": 11, "interest": 2.5,  "speed": 3.5,  "tint": (160, 30, 60)},
+        5: {"name": "bankruptcy", "max_debt": 16, "interest": 3.5,  "speed": 5.0,  "tint": (220, 50, 80)},
     }
     
-    # Bankruptcy threshold - beyond this, severe consequences
-    BANKRUPTCY_THRESHOLD = 20.0
-    
-    # Bankruptcy recovery requires surviving this duration
-    BANKRUPTCY_SURVIVAL_TIME = 5.0
+    BANKRUPTCY_THRESHOLD = 16.0   # was 20 — punishes greed faster
+    BANKRUPTCY_SURVIVAL_TIME = 4.0
     
     # ===================
     # ANCHOR SYSTEM SETTINGS
     # ===================
-    
-    # Maximum simultaneous anchors
     MAX_ANCHORS = 3
-    
-    # Anchors decay after this many real seconds
-    ANCHOR_DECAY_TIME = 30.0
-    
-    # Recalling to anchor adds instant debt
-    ANCHOR_RECALL_DEBT = 2.0
+    ANCHOR_DECAY_TIME = 22.0      # was 30 — forces quicker decision-making
+    ANCHOR_RECALL_DEBT = 3.0      # was 2 — costlier safety net
     
     # ===================
     # PLAYER SETTINGS
     # ===================
-    
-    # Base movement speed (pixels per second)
-    PLAYER_SPEED = 250.0
-    
-    # Player size for collision (slightly smaller for tighter spaces)
-    PLAYER_SIZE = (36, 36)
-    
-    # Respawn invulnerability duration
-    RESPAWN_INVULN_TIME = 1.5
+    PLAYER_SPEED = 230.0          # was 250 — slightly slower = more tense
+    PLAYER_SIZE = (34, 34)        # tighter hitbox
+    RESPAWN_INVULN_TIME = 1.0     # was 1.5 — less free time
     
     # ===================
-    # ENEMY SETTINGS
+    # ENEMY SETTINGS  (+30-40 % faster / meaner)
     # ===================
+    DRONE_SPEED = 160.0           # was 120
+    SEEKER_RANGE = 380.0          # was 300
+    SEEKER_SPEED = 195.0          # was 150
+    HUNTER_SPEED = 240.0          # was 180
+    SHADOW_SPAWN_DEBT = 7.0       # was 10 — shadows arrive earlier
+    SHADOW_SPEED = 135.0          # was 100
     
-    # Patrol drone speed
-    DRONE_SPEED = 120.0
-    
-    # Seeker drone detection range
-    SEEKER_RANGE = 300.0
-    SEEKER_SPEED = 150.0
-    
-    # Temporal Hunter speed (only moves during freeze)
-    HUNTER_SPEED = 180.0
-    
-    # Debt Shadow spawn threshold
-    SHADOW_SPAWN_DEBT = 10.0
-    SHADOW_SPEED = 100.0
+    # ===================
+    # DANGER ZONE PUNISHMENT
+    # ===================
+    DANGER_ZONE_DAMAGE_RATE = 1.5   # debt/sec while standing in danger zone
+    DANGER_ZONE_SLOW_FACTOR = 0.65  # player moves 35 % slower in danger
+    SAFE_ZONE_HEAL_RATE = 0.3       # debt reduced/sec in safe zone (slow)
     
     # ===================
     # INTERACTABLE SETTINGS
     # ===================
-    
-    # Debt sink absorption
-    DEBT_SINK_AMOUNT = 3.0
-    
-    # Debt bomb payload
-    DEBT_BOMB_PAYLOAD = 5.0
-    DEBT_BOMB_RADIUS = 150.0
-    
-    # Timed door settings
-    DOOR_OPEN_DURATION = 3.0
+    DEBT_SINK_AMOUNT = 2.5        # was 3 — less generous
+    DEBT_BOMB_PAYLOAD = 6.0       # was 5 — harsher
+    DEBT_BOMB_RADIUS = 170.0
+    DOOR_OPEN_DURATION = 2.5      # was 3 — tighter timing
     
     # ===================
     # ECHO SYSTEM SETTINGS
     # ===================
-    
-    # How far into the future to predict
     ECHO_PREDICTION_DURATION = 3.0
-    
-    # Time between echo frames
     ECHO_INTERVAL = 0.1
-    
-    # Echo visibility
     ECHO_BASE_ALPHA = 180
-    ECHO_FADE_RATE = 0.7  # Each subsequent echo is this fraction of previous
+    ECHO_FADE_RATE = 0.7
     
     # ===================
-    # VISUAL SETTINGS
+    # VISUAL SETTINGS — Neon Abyss / Psychological Theme
     # ===================
     
-    # Colors
     class Colors:
-        # UI Colors
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
-        GRAY = (128, 128, 128)
-        DARK_GRAY = (64, 64, 64)
+        # Core palette
+        WHITE       = (240, 240, 250)
+        BLACK       = (6, 6, 14)
+        GRAY        = (100, 105, 120)
+        DARK_GRAY   = (35, 38, 50)
         
-        # Game element colors
-        PLAYER = (100, 200, 255)
-        PLAYER_FROZEN = (150, 220, 255)
+        # Player — cool teal, shifts to electric cyan when frozen
+        PLAYER        = (0, 220, 210)
+        PLAYER_FROZEN = (100, 255, 255)
+        PLAYER_TRAIL  = (0, 180, 170, 60)   # after-image ghost
         
-        WALL = (60, 60, 80)
-        FLOOR = (30, 30, 40)
+        # Environment — dark, moody
+        WALL  = (28, 30, 48)
+        WALL_HIGHLIGHT = (50, 55, 80)
+        WALL_SHADOW    = (14, 14, 28)
+        FLOOR = (14, 16, 26)
+        FLOOR_ALT = (18, 20, 32)
         
-        # Enemy colors
-        DRONE = (255, 100, 100)
-        HUNTER = (180, 50, 180)
-        SHADOW = (40, 0, 60)
+        # Enemies — aggressive warm tones
+        DRONE       = (255, 60, 80)      # neon red-pink
+        DRONE_GLOW  = (255, 60, 80, 60)
+        HUNTER      = (200, 50, 220)     # electric purple
+        HUNTER_GLOW = (200, 50, 220, 80)
+        SHADOW      = (60, 0, 80)
+        SHADOW_EYE  = (255, 30, 90)
+        
+        # NEW enemies
+        PHASE_SHIFTER = (255, 170, 0)    # hot amber — teleporting enemy
+        DEBT_LEECH    = (180, 255, 0)    # acid green — drains your debt upward
+        SWARM_DRONE   = (255, 100, 150)  # pink swarm units
         
         # Interactable colors
-        DEBT_SINK = (100, 255, 150)
-        DEBT_MIRROR = (200, 200, 255)
-        DEBT_BOMB = (255, 200, 100)
-        DOOR_CLOSED = (139, 69, 19)
-        DOOR_OPEN = (69, 139, 69)
+        DEBT_SINK   = (0, 255, 180)
+        DEBT_MIRROR = (180, 180, 255)
+        DEBT_BOMB   = (255, 180, 50)
+        DOOR_CLOSED = (120, 50, 20)
+        DOOR_OPEN   = (40, 200, 100)
         
-        # Effect colors
-        ANCHOR = (255, 215, 0)
-        ANCHOR_FADING = (255, 215, 0, 128)
-        ECHO = (100, 150, 255)
+        # Effects — gold anchors, blue echoes
+        ANCHOR        = (255, 200, 50)
+        ANCHOR_FADING = (255, 200, 50, 100)
+        ECHO          = (80, 140, 255)
         
-        # Time freeze overlay
-        FREEZE_TINT = (50, 80, 120, 80)
+        # Time freeze overlay — desaturated blue wash
+        FREEZE_TINT = (30, 60, 100, 90)
         
-        # Debt tier colors (progressive red shift)
-        TIER_CLEAR = (50, 200, 100)
-        TIER_MILD = (150, 200, 50)
-        TIER_MODERATE = (200, 200, 50)
-        TIER_SEVERE = (255, 150, 50)
-        TIER_CRITICAL = (255, 80, 50)
-        TIER_BANKRUPTCY = (255, 0, 50)
+        # Debt tier colors — psychological gradient:
+        # green-calm → amber-anxiety → red-panic → magenta-doom
+        TIER_CLEAR      = (0, 230, 160)
+        TIER_MILD       = (160, 220, 50)
+        TIER_MODERATE   = (240, 200, 30)
+        TIER_SEVERE     = (255, 130, 30)
+        TIER_CRITICAL   = (255, 50, 70)
+        TIER_BANKRUPTCY = (220, 0, 80)
         
-        # UI specific
-        HUD_BACKGROUND = (20, 20, 30, 200)
-        DEBT_BAR_BG = (40, 40, 50)
-        DEBT_BAR_FILL = (255, 100, 100)
+        # UI-specific
+        HUD_BACKGROUND = (10, 12, 22, 210)
+        HUD_BORDER     = (50, 60, 90)
+        DEBT_BAR_BG    = (25, 28, 42)
+        DEBT_BAR_FILL  = (255, 60, 80)
         
-        EXIT_ZONE = (100, 255, 100)
-        CHECKPOINT = (255, 255, 100)
+        EXIT_ZONE       = (0, 255, 140)
+        EXIT_ZONE_GLOW  = (0, 255, 140, 40)
+        CHECKPOINT       = (255, 230, 80)
+        CHECKPOINT_GLOW  = (255, 230, 80, 50)
+        
+        # Danger/safe zone
+        DANGER_ZONE      = (255, 40, 60)
+        DANGER_ZONE_BG   = (80, 10, 20, 80)
+        SAFE_ZONE        = (40, 140, 255)
+        SAFE_ZONE_BG     = (20, 40, 80, 60)
+        
+        # Menu accents
+        MENU_BG        = (8, 10, 20)
+        MENU_GRID      = (18, 22, 40)
+        MENU_ACCENT    = (0, 200, 255)
+        MENU_ACCENT2   = (220, 50, 255)
+        MENU_TEXT       = (200, 210, 230)
+        MENU_TEXT_DIM   = (100, 110, 130)
     
     # ===================
     # SCREEN EFFECT SETTINGS
     # ===================
+    SHAKE_INTENSITY_BASE = 7      # was 5 — more impactful
+    SHAKE_DECAY = 0.88
+    VIGNETTE_INTENSITY = 0.4
     
-    # Screen shake parameters
-    SHAKE_INTENSITY_BASE = 5
-    SHAKE_DECAY = 0.9
-    
-    # Vignette during high debt
-    VIGNETTE_INTENSITY = 0.3
+    # Chromatic aberration on high debt
+    CHROMATIC_OFFSET_MAX = 4
     
     # ===================
-    # V2.0 FEATURE SETTINGS
+    # V2.0 / V3.0 FEATURE SETTINGS
     # ===================
     
     # Temporal Momentum System
     MOMENTUM_MAX = 10.0
-    MOMENTUM_BUILD_RATE = 1.0  # Points per second
-    MOMENTUM_DRAIN_RATE = 2.0  # Points per second during freeze
-    MOMENTUM_DEBT_REDUCTION = 0.05  # 5% per point
+    MOMENTUM_BUILD_RATE = 0.8     # was 1.0 — harder to build
+    MOMENTUM_DRAIN_RATE = 3.0     # was 2.0 — drains faster
+    MOMENTUM_DEBT_REDUCTION = 0.04
     
-    # Resonance System
-    RESONANCE_MIN_INTERVAL = 15.0
-    RESONANCE_MAX_INTERVAL = 20.0
-    RESONANCE_WARNING_DURATION = 2.0
-    RESONANCE_WAVE_DURATION = 1.5
-    RESONANCE_FROZEN_PENALTY = 3.0
-    RESONANCE_MOVING_BONUS = 0.5
+    # Resonance System — more frequent, harsher
+    RESONANCE_MIN_INTERVAL = 10.0
+    RESONANCE_MAX_INTERVAL = 16.0
+    RESONANCE_WARNING_DURATION = 1.5
+    RESONANCE_WAVE_DURATION = 2.0
+    RESONANCE_FROZEN_PENALTY = 4.5
+    RESONANCE_MOVING_BONUS = 0.3
     
     # Chrono-Clone System
-    CLONE_RECORDING_DURATION = 5.0
-    CLONE_COOLDOWN = 8.0
+    CLONE_RECORDING_DURATION = 4.0
+    CLONE_COOLDOWN = 10.0
     
     # Time Reversal System
-    REVERSAL_COST = 8.0
-    REVERSAL_DURATION = 3.0
+    REVERSAL_COST = 10.0
+    REVERSAL_DURATION = 2.5
     REVERSAL_USES_PER_LIFE = 1
     
     # Temporal Fragments
-    FRAGMENT_DEBT_REDUCTION = 1.5
+    FRAGMENT_DEBT_REDUCTION = 1.0   # was 1.5
     FRAGMENTS_FOR_BURST = 5
-    BURST_DURATION = 2.0
-    BURST_TIME_SCALE = 0.3
+    BURST_DURATION = 1.5
+    BURST_TIME_SCALE = 0.35
     
     # Time Dilation Zones
-    SAFE_ZONE_MULTIPLIER = 0.75
-    DANGER_ZONE_MULTIPLIER = 2.0
+    SAFE_ZONE_MULTIPLIER = 0.8     # was 0.75
+    DANGER_ZONE_MULTIPLIER = 2.5   # was 2.0
     
     # Debt Transfer Pods
-    POD_MAX_DEBT = 5.0
-    POD_DEPOSIT_RATE = 2.0
-    POD_RELEASE_RADIUS = 150.0
+    POD_MAX_DEBT = 4.0
+    POD_DEPOSIT_RATE = 1.5
+    POD_RELEASE_RADIUS = 170.0
     
     # ===================
-    # AUDIO HOOKS (for future implementation)
+    # NEW: PHASE SHIFTER ENEMY
     # ===================
+    PHASE_SHIFTER_SPEED = 100.0
+    PHASE_SHIFTER_TELEPORT_COOLDOWN = 4.0
+    PHASE_SHIFTER_TELEPORT_RANGE = 200.0
     
-    SOUND_ENABLED = False  # Set to True when audio files exist
+    # ===================
+    # NEW: DEBT LEECH ENEMY
+    # ===================
+    DEBT_LEECH_SPEED = 70.0
+    DEBT_LEECH_RANGE = 180.0
+    DEBT_LEECH_DRAIN_RATE = 2.0   # debt/sec added to player when close
     
-    # Volume levels
+    # ===================
+    # NEW: SWARM DRONE
+    # ===================
+    SWARM_DRONE_SPEED = 200.0
+    SWARM_DRONE_SIZE = (24, 24)
+    SWARM_DRONE_LIFETIME = 6.0
+    
+    # ===================
+    # AUDIO
+    # ===================
+    SOUND_ENABLED = False
     MASTER_VOLUME = 0.8
     SFX_VOLUME = 0.7
     MUSIC_VOLUME = 0.5
@@ -248,12 +269,11 @@ class Settings:
     # ===================
     # DEBUG SETTINGS
     # ===================
-    
     DEBUG_MODE = False
     SHOW_COLLISION_BOXES = False
     SHOW_PATROL_PATHS = False
     SHOW_FPS = True
-    GOD_MODE = False  # Invulnerability for testing
+    GOD_MODE = False
 
 
 # Create a convenient alias

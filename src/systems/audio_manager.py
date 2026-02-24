@@ -8,15 +8,28 @@ Features:
 - Procedurally generated sound effects
 - Dynamic music that responds to game state
 - Volume control and mixing
+- WASM/Web fallback (audio disabled in browser)
 """
 
+from __future__ import annotations  # Defer type annotation evaluation
+
 import pygame
-import numpy as np
-import math
-from typing import Dict, Optional
+import sys
+from typing import Dict, Optional, Any
 from enum import Enum, auto
 
-from ..core.settings import Settings
+# Detect WASM environment
+IS_WASM = sys.platform == "emscripten"
+
+# Try to import numpy (may not be available in WASM)
+NUMPY_AVAILABLE = False
+np: Any = None
+if not IS_WASM:
+    try:
+        import numpy as np
+        NUMPY_AVAILABLE = True
+    except ImportError:
+        print("NumPy not available - audio disabled")
 
 
 class SoundType(Enum):
@@ -102,8 +115,11 @@ class ProceduralSoundGenerator:
     
     @staticmethod
     def generate_noise_burst(duration: float, volume: float = 0.3,
-                            filter_type: str = 'white') -> np.ndarray:
+                            filter_type: str = 'white') -> 'np.ndarray':
         """Generate filtered noise."""
+        if not NUMPY_AVAILABLE:
+            return None
+        
         num_samples = int(ProceduralSoundGenerator.SAMPLE_RATE * duration)
         
         # White noise
@@ -113,10 +129,12 @@ class ProceduralSoundGenerator:
             # Simple low-pass filter for pink-ish noise
             b = [0.049922035, -0.095993537, 0.050612699, -0.004408786]
             a = [1, -2.494956002, 2.017265875, -0.522189400]
-            from scipy import signal
             try:
+                from scipy import signal
                 noise = signal.lfilter(b, a, noise)
-            except:
+            except ImportError:
+                pass  # Fall back to white noise
+            except Exception:
                 pass  # Fall back to white noise
         
         # Apply envelope
@@ -296,6 +314,15 @@ class AudioManager:
         # Music state
         self._current_music: Optional[pygame.mixer.Sound] = None
         self._music_channel: Optional[pygame.mixer.Channel] = None
+        
+        # Skip audio in WASM or if numpy not available
+        if IS_WASM:
+            print("Audio disabled in web build (WASM)")
+            return
+        
+        if not NUMPY_AVAILABLE:
+            print("Audio disabled (NumPy not available)")
+            return
         
         # Initialize
         self._init_audio()

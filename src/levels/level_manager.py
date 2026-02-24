@@ -33,6 +33,14 @@ if TYPE_CHECKING:
     from ..systems.debt_manager import DebtManager
     from ..systems.time_engine import TimeEngine
 from ..entities.enemies import PatrolDrone, TemporalHunter, DebtShadow
+
+# New V3 enemies (safe import)
+try:
+    from ..entities.enemies import PhaseShifter, DebtLeech, SwarmDrone
+    _has_v3_enemies = True
+except ImportError:
+    _has_v3_enemies = False
+
 from ..entities.interactables import DebtSink, DebtBomb, TimedDoor, ExitZone, Checkpoint
 
 
@@ -253,6 +261,22 @@ class LevelManager:
             )
             return door
         
+        # V3.0 Enemy Types
+        elif data.entity_type == "phase_shifter" and _has_v3_enemies:
+            shifter = PhaseShifter(position=position)
+            return shifter
+        
+        elif data.entity_type == "debt_leech" and _has_v3_enemies:
+            leech = DebtLeech(position=position)
+            return leech
+        
+        elif data.entity_type == "swarm_drone" and _has_v3_enemies:
+            drone = SwarmDrone(
+                position=position,
+                target=self.player,
+            )
+            return drone
+        
         # V2.0 Entity Types
         elif data.entity_type == "temporal_fragment":
             try:
@@ -318,6 +342,12 @@ class LevelManager:
             elif isinstance(entity, DebtShadow):
                 debt = self._debt_manager.current_debt if self._debt_manager else 0
                 entity.update(dt, debt)
+            elif _has_v3_enemies and isinstance(entity, PhaseShifter):
+                entity.update(dt)
+            elif _has_v3_enemies and isinstance(entity, DebtLeech):
+                entity.update(dt, self._debt_manager)
+            elif _has_v3_enemies and isinstance(entity, SwarmDrone):
+                entity.update(dt)
             elif isinstance(entity, DebtBomb):
                 player_pos = self.player.center if self.player else None
                 explosion = entity.update(game_dt, player_pos)
@@ -329,6 +359,10 @@ class LevelManager:
         # Set hunter targets
         for entity in self.entities:
             if isinstance(entity, TemporalHunter) and self.player:
+                entity.set_target(self.player)
+            elif _has_v3_enemies and isinstance(entity, PhaseShifter) and self.player:
+                entity.set_target(self.player)
+            elif _has_v3_enemies and isinstance(entity, DebtLeech) and self.player:
                 entity.set_target(self.player)
         
         # Check player-exit collision
@@ -357,8 +391,11 @@ class LevelManager:
         # Check enemy collisions
         if self.player and not self.player.is_invulnerable:
             player_rect = self.player.get_rect()
+            kill_types = [PatrolDrone, TemporalHunter, DebtShadow]
+            if _has_v3_enemies:
+                kill_types.extend([PhaseShifter, SwarmDrone])
             for entity in self.entities:
-                if isinstance(entity, (PatrolDrone, TemporalHunter, DebtShadow)):
+                if isinstance(entity, tuple(kill_types)):
                     if player_rect.colliderect(entity.get_rect()):
                         self.player.die()
                         break
@@ -457,8 +494,11 @@ class LevelManager:
                     entity.render(screen)
         
         # Fifth layer: enemies
+        enemy_types = [PatrolDrone, TemporalHunter, DebtShadow]
+        if _has_v3_enemies:
+            enemy_types.extend([PhaseShifter, DebtLeech, SwarmDrone])
         for entity in self.entities:
-            if isinstance(entity, (PatrolDrone, TemporalHunter, DebtShadow)):
+            if isinstance(entity, tuple(enemy_types)):
                 entity.render(screen)
         
         # Player renders last (on top)
@@ -469,6 +509,12 @@ class LevelManager:
         """Get all wall collision rectangles."""
         if self.tile_grid:
             return self.tile_grid.get_wall_rects()
+        return []
+    
+    def get_hazard_rects(self) -> List[pygame.Rect]:
+        """Get rectangles for all hazard tiles (danger zones)."""
+        if self.tile_grid:
+            return self.tile_grid.get_hazard_rects()
         return []
     
     def has_next_level(self) -> bool:

@@ -1,16 +1,8 @@
 """
 Screen Effects - Visual feedback and post-processing.
 
-Screen effects communicate game state through visuals:
-- Time freeze tint
-- Debt tier overlays
-- Screen shake
-- Flash effects
-
-Design Philosophy:
-- Effects support gameplay understanding
-- Never obscure critical information
-- Intensity scales with game state
+Neon Abyss theme — chromatic aberration at high debt, scan lines,
+enhanced vignette, and tighter flash decay for snappy feel.
 """
 
 import pygame
@@ -24,14 +16,11 @@ from ..core.utils import Vector2, lerp
 
 class ScreenEffects:
     """
-    Manages all screen-wide visual effects.
-    
-    Effects are layered and composited after main rendering.
+    Screen-wide visual effects with Neon Abyss theming.
     """
     
     def __init__(self):
-        """Initialize screen effects."""
-        # Screen shake
+        # Shake
         self._shake_intensity = 0.0
         self._shake_offset = Vector2.zero()
         
@@ -39,48 +28,61 @@ class ScreenEffects:
         self._tint_color = (0, 0, 0, 0)
         self._target_tint = (0, 0, 0, 0)
         
-        # Flash effect
+        # Flash
         self._flash_alpha = 0
-        self._flash_color = COLORS.WHITE
+        self._flash_color = (255, 255, 255)
         
         # Vignette
         self._vignette_intensity = 0.0
         
-        # Time freeze overlay
+        # Freeze
         self._freeze_active = False
         self._freeze_alpha = 0
         
+        # Chromatic aberration (increases with debt tier)
+        self._chromatic_offset = 0.0
+        self._target_chromatic = 0.0
+        
+        # Scan lines toggle (active at tier >= 3)
+        self._scanlines_active = False
+        
+        # Current debt tier for effect scaling
+        self._current_tier = 0
+        
         # Cached surfaces
         self._vignette_surface: Optional[pygame.Surface] = None
+        self._scanline_surface: Optional[pygame.Surface] = None
         self._create_vignette_surface()
+        self._create_scanline_surface()
     
     def _create_vignette_surface(self) -> None:
-        """Create the vignette overlay surface."""
         self._vignette_surface = pygame.Surface(
             (Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT),
             pygame.SRCALPHA
         )
+        cx = Settings.SCREEN_WIDTH // 2
+        cy = Settings.SCREEN_HEIGHT // 2
+        max_dist = math.sqrt(cx ** 2 + cy ** 2)
         
-        # Create radial gradient vignette
-        center_x = Settings.SCREEN_WIDTH // 2
-        center_y = Settings.SCREEN_HEIGHT // 2
-        max_dist = math.sqrt(center_x ** 2 + center_y ** 2)
-        
-        for y in range(0, Settings.SCREEN_HEIGHT, 4):
-            for x in range(0, Settings.SCREEN_WIDTH, 4):
-                dist = math.sqrt((x - center_x) ** 2 + (y - center_y) ** 2)
-                alpha = int(255 * (dist / max_dist) ** 2)
+        step = 4
+        for y in range(0, Settings.SCREEN_HEIGHT, step):
+            for x in range(0, Settings.SCREEN_WIDTH, step):
+                dist = math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+                alpha = int(255 * (dist / max_dist) ** 2.2)
                 pygame.draw.rect(self._vignette_surface, (0, 0, 0, alpha),
-                               (x, y, 4, 4))
+                                (x, y, step, step))
+    
+    def _create_scanline_surface(self) -> None:
+        self._scanline_surface = pygame.Surface(
+            (Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT),
+            pygame.SRCALPHA
+        )
+        for y in range(0, Settings.SCREEN_HEIGHT, 3):
+            pygame.draw.line(self._scanline_surface, (0, 0, 0, 18),
+                           (0, y), (Settings.SCREEN_WIDTH, y))
     
     def update(self, dt: float) -> None:
-        """
-        Update all effects.
-        
-        Args:
-            dt: Delta time
-        """
-        # Decay shake
+        # Shake decay
         self._shake_intensity *= Settings.SHAKE_DECAY
         if self._shake_intensity < 0.5:
             self._shake_intensity = 0
@@ -99,85 +101,62 @@ class ScreenEffects:
             int(lerp(self._tint_color[3], self._target_tint[3], dt * 3))
         )
         
-        # Decay flash
-        self._flash_alpha = max(0, self._flash_alpha - int(dt * 500))
+        # Flash decay (faster for snappy feel)
+        self._flash_alpha = max(0, self._flash_alpha - int(dt * 600))
         
         # Freeze overlay
         if self._freeze_active:
-            self._freeze_alpha = min(80, self._freeze_alpha + int(dt * 300))
+            self._freeze_alpha = min(60, self._freeze_alpha + int(dt * 350))
         else:
-            self._freeze_alpha = max(0, self._freeze_alpha - int(dt * 300))
+            self._freeze_alpha = max(0, self._freeze_alpha - int(dt * 400))
+        
+        # Smooth chromatic aberration
+        self._chromatic_offset = lerp(self._chromatic_offset, self._target_chromatic, dt * 4)
     
     def trigger_shake(self, intensity: float = None) -> None:
-        """
-        Trigger screen shake.
-        
-        Args:
-            intensity: Shake strength (uses default if None)
-        """
         self._shake_intensity = intensity or Settings.SHAKE_INTENSITY_BASE
     
     def set_tint(self, color: Tuple[int, int, int], alpha: int = 50) -> None:
-        """
-        Set target screen tint color.
-        
-        Args:
-            color: RGB color
-            alpha: Tint transparency
-        """
         self._target_tint = (*color, alpha)
     
     def clear_tint(self) -> None:
-        """Remove screen tint."""
         self._target_tint = (0, 0, 0, 0)
     
     def flash(self, color: Tuple[int, int, int] = None, intensity: int = 200) -> None:
-        """
-        Trigger screen flash.
-        
-        Args:
-            color: Flash color (white if None)
-            intensity: Flash alpha
-        """
-        self._flash_color = color or COLORS.WHITE
-        self._flash_alpha = intensity
+        self._flash_color = color or (255, 255, 255)
+        self._flash_alpha = min(255, max(0, intensity))
     
     def set_freeze_active(self, active: bool) -> None:
-        """Set time freeze overlay state."""
         self._freeze_active = active
     
     def set_vignette_intensity(self, intensity: float) -> None:
-        """Set vignette darkness."""
         self._vignette_intensity = max(0, min(1, intensity))
     
     def set_debt_tier(self, tier: int) -> None:
-        """
-        Set effects based on debt tier.
-        
-        Args:
-            tier: Current debt tier (0-5)
-        """
+        self._current_tier = tier
         tint = Settings.DEBT_TIERS[tier]['tint']
         
         if tier >= 3:
-            # High tiers get vignette and tint
-            self.set_tint(tint, 30 + tier * 10)
-            self.set_vignette_intensity(0.1 * tier)
+            self.set_tint(tint, 20 + tier * 12)
+            self.set_vignette_intensity(0.12 * tier)
             
-            # Shake at critical levels
-            if tier >= 4:
-                if random.random() < 0.1:  # Occasional shake
-                    self.trigger_shake(tier * 2)
+            # Chromatic aberration scales with tier
+            max_offset = getattr(Settings, 'CHROMATIC_OFFSET_MAX', 4)
+            self._target_chromatic = max_offset * ((tier - 2) / 3)
+            self._scanlines_active = True
+            
+            if tier >= 4 and random.random() < 0.12:
+                self.trigger_shake(tier * 2.5)
         else:
             self.clear_tint()
             self.set_vignette_intensity(0)
+            self._target_chromatic = 0
+            self._scanlines_active = False
     
     def get_shake_offset(self) -> Vector2:
-        """Get current shake offset for camera."""
         return self._shake_offset
     
     def reset(self) -> None:
-        """Reset all effects to initial state."""
         self._shake_intensity = 0.0
         self._shake_offset = Vector2.zero()
         self._tint_color = (0, 0, 0, 0)
@@ -186,21 +165,35 @@ class ScreenEffects:
         self._freeze_active = False
         self._freeze_alpha = 0
         self._vignette_intensity = 0.0
+        self._chromatic_offset = 0.0
+        self._target_chromatic = 0.0
+        self._scanlines_active = False
+        self._current_tier = 0
 
     def render(self, screen: pygame.Surface) -> None:
-        """
-        Render all effects on top of the game.
+        # Chromatic aberration (shift red/blue channels at high debt)
+        if self._chromatic_offset >= 0.5:
+            offset = int(self._chromatic_offset)
+            if offset > 0:
+                w, h = screen.get_size()
+                red_layer = pygame.Surface((w, h), pygame.SRCALPHA)
+                blue_layer = pygame.Surface((w, h), pygame.SRCALPHA)
+                
+                red_layer.fill((255, 0, 0, 12))
+                blue_layer.fill((0, 0, 255, 10))
+                
+                screen.blit(red_layer, (-offset, 0))
+                screen.blit(blue_layer, (offset, 0))
         
-        Args:
-            screen: Surface to render to
-        """
-        # Time freeze overlay
+        # Time freeze tint
         if self._freeze_alpha > 0:
+            freeze_tint = getattr(COLORS, 'FREEZE_TINT', (100, 200, 255))
             freeze_surface = pygame.Surface(
                 (Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT),
                 pygame.SRCALPHA
             )
-            freeze_surface.fill((*COLORS.FREEZE_TINT[:3], self._freeze_alpha))
+            ft = freeze_tint[:3]
+            freeze_surface.fill((ft[0], ft[1], ft[2], min(255, max(0, self._freeze_alpha))))
             screen.blit(freeze_surface, (0, 0))
         
         # Debt tint
@@ -211,6 +204,10 @@ class ScreenEffects:
             )
             tint_surface.fill(self._tint_color)
             screen.blit(tint_surface, (0, 0))
+        
+        # Scan lines (at high tier)
+        if self._scanlines_active and self._scanline_surface:
+            screen.blit(self._scanline_surface, (0, 0))
         
         # Vignette
         if self._vignette_intensity > 0 and self._vignette_surface:
@@ -224,7 +221,8 @@ class ScreenEffects:
                 (Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT),
                 pygame.SRCALPHA
             )
-            flash_surface.fill((*self._flash_color, self._flash_alpha))
+            fc = self._flash_color
+            flash_surface.fill((fc[0], fc[1], fc[2], min(255, max(0, self._flash_alpha))))
             screen.blit(flash_surface, (0, 0))
 
 
@@ -301,7 +299,7 @@ class ParticleSystem:
             
             # Create surface with alpha
             surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
-            pygame.draw.circle(surf, (*color, alpha), (size, size), size)
+            pygame.draw.circle(surf, (color[0], color[1], color[2], min(255, max(0, alpha))), (size, size), size)
             screen.blit(surf, (pos[0] - size, pos[1] - size))
     
     def clear(self) -> None:

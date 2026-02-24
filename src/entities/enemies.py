@@ -465,8 +465,8 @@ class DebtShadow(BaseEntity):
             offset = i * 3 + wobble
             layer_alpha = self.alpha // (i + 1)
             layer_rect = pygame.Rect(
-                10 - offset, 10 - offset,
-                self.size[0] + offset * 2, self.size[1] + offset * 2
+                int(10 - offset), int(10 - offset),
+                int(self.size[0] + offset * 2), int(self.size[1] + offset * 2)
             )
             pygame.draw.rect(shadow_surf, (*self.color, layer_alpha), layer_rect)
         
@@ -475,7 +475,264 @@ class DebtShadow(BaseEntity):
         # Draw menacing eyes
         if not self.is_dissolving:
             eye_y = center.y - 5
-            pygame.draw.circle(screen, (200, 0, 50), 
+            pygame.draw.circle(screen, getattr(COLORS, 'SHADOW_EYE', (200, 0, 50)), 
                              (int(center.x - 10), int(eye_y)), 5)
-            pygame.draw.circle(screen, (200, 0, 50),
+            pygame.draw.circle(screen, getattr(COLORS, 'SHADOW_EYE', (200, 0, 50)),
                              (int(center.x + 10), int(eye_y)), 5)
+
+
+# =====================================================================
+# NEW V3 ENEMIES
+# =====================================================================
+
+class PhaseShifter(BaseEntity):
+    """
+    A teleporting enemy that blinks to a new position on cooldown.
+    
+    Creates unpredictable threat — player can't rely on pattern memory.
+    Psychological trick: appears where you *were* heading.
+    """
+    
+    def __init__(self, position: Vector2, speed: float = None):
+        super().__init__(position, (38, 38))
+        self.speed = speed or Settings.PHASE_SHIFTER_SPEED
+        self.target: Optional['Player'] = None
+        
+        self.teleport_cooldown = Settings.PHASE_SHIFTER_TELEPORT_COOLDOWN
+        self._teleport_timer = self.teleport_cooldown * 0.5
+        self._teleport_range = Settings.PHASE_SHIFTER_TELEPORT_RANGE
+        self._is_phasing = False
+        self._phase_timer = 0.0
+        self._phase_duration = 0.4
+        self._old_pos = position.copy()
+        
+        self.color = getattr(COLORS, 'PHASE_SHIFTER', (255, 170, 0))
+        self.collision_layer = CollisionLayer.ENEMY
+        self.collision_mask = CollisionLayer.PLAYER
+        self.affected_by_time = True
+        
+        self._anim_timer = 0.0
+        self._ring_alpha = 0
+        import random as _rng
+        self._rng = _rng
+
+    def set_target(self, target: 'Player') -> None:
+        self.target = target
+
+    def update(self, dt: float) -> None:
+        if dt == 0:
+            return
+        self._anim_timer += dt
+        
+        if self._is_phasing:
+            self._phase_timer += dt
+            self._ring_alpha = int(200 * (1 - self._phase_timer / self._phase_duration))
+            if self._phase_timer >= self._phase_duration:
+                self._is_phasing = False
+                self._phase_timer = 0.0
+            return
+        
+        if self.target and not self.target.is_dead:
+            direction = (self.target.center - self.center)
+            if direction.magnitude() > 10:
+                direction = direction.normalized()
+                self.velocity = direction * self.speed
+                self.position = self.position + self.velocity * dt
+        
+        self._teleport_timer += dt
+        if self._teleport_timer >= self.teleport_cooldown and self.target:
+            self._teleport_timer = 0.0
+            self._initiate_phase()
+
+    def _initiate_phase(self) -> None:
+        if not self.target:
+            return
+        self._old_pos = self.position.copy()
+        self._is_phasing = True
+        self._phase_timer = 0.0
+        self._ring_alpha = 200
+        
+        angle = self._rng.uniform(0, math.pi * 2)
+        dist = self._rng.uniform(80, self._teleport_range)
+        new_x = self.target.center.x + math.cos(angle) * dist - self.size[0] / 2
+        new_y = self.target.center.y + math.sin(angle) * dist - self.size[1] / 2
+        new_x = max(0, min(Settings.SCREEN_WIDTH - self.size[0], new_x))
+        new_y = max(0, min(Settings.SCREEN_HEIGHT - self.size[1], new_y))
+        self.position = Vector2(new_x, new_y)
+
+    def render(self, screen: pygame.Surface) -> None:
+        if not self.visible:
+            return
+        rect = self.get_rect()
+        center = self.center
+        
+        if self._is_phasing:
+            if self._ring_alpha > 0:
+                ring_surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+                pygame.draw.circle(ring_surf, (*self.color, min(255, self._ring_alpha)),
+                                 (40, 40), 35, 3)
+                screen.blit(ring_surf, (int(self._old_pos.x + self.size[0]//2 - 40),
+                                       int(self._old_pos.y + self.size[1]//2 - 40)))
+            return
+        
+        glow_surf = pygame.Surface((rect.width + 16, rect.height + 16), pygame.SRCALPHA)
+        pulse = (math.sin(self._anim_timer * 5) + 1) / 2
+        glow_alpha = int(40 + 30 * pulse)
+        pygame.draw.rect(glow_surf, (*self.color, glow_alpha),
+                        (0, 0, rect.width + 16, rect.height + 16), border_radius=8)
+        screen.blit(glow_surf, (rect.x - 8, rect.y - 8))
+        
+        points = [
+            (center.x, center.y - self.size[1]//2),
+            (center.x + self.size[0]//2, center.y),
+            (center.x, center.y + self.size[1]//2),
+            (center.x - self.size[0]//2, center.y),
+        ]
+        int_points = [(int(p[0]), int(p[1])) for p in points]
+        pygame.draw.polygon(screen, self.color, int_points)
+        pygame.draw.polygon(screen, COLORS.WHITE, int_points, 2)
+        
+        pygame.draw.circle(screen, COLORS.WHITE, (int(center.x), int(center.y)), 6)
+        pygame.draw.circle(screen, self.color, (int(center.x), int(center.y)), 3)
+
+
+class DebtLeech(BaseEntity):
+    """
+    Doesn't kill — instead adds debt every second while close.
+    Forces awareness of proximity danger.
+    """
+    
+    def __init__(self, position: Vector2, speed: float = None):
+        super().__init__(position, (36, 36))
+        self.speed = speed or Settings.DEBT_LEECH_SPEED
+        self.target: Optional['Player'] = None
+        
+        self.drain_range = Settings.DEBT_LEECH_RANGE
+        self.drain_rate = Settings.DEBT_LEECH_DRAIN_RATE
+        self.is_draining = False
+        
+        self.color = getattr(COLORS, 'DEBT_LEECH', (180, 255, 0))
+        self.collision_layer = CollisionLayer.TRIGGER
+        self.collision_mask = CollisionLayer.PLAYER
+        self.affected_by_time = True
+        
+        self._pulse_timer = 0.0
+        self._drain_beam_alpha = 0
+
+    def set_target(self, target: 'Player') -> None:
+        self.target = target
+
+    def update(self, dt: float, debt_manager=None) -> None:
+        if dt == 0:
+            return
+        self._pulse_timer += dt * 3
+        
+        if self.target and not self.target.is_dead:
+            distance = self.center.distance_to(self.target.center)
+            self.is_draining = distance <= self.drain_range
+            
+            direction = (self.target.center - self.center)
+            if direction.magnitude() > 10:
+                direction = direction.normalized()
+                self.velocity = direction * self.speed
+                self.position = self.position + self.velocity * dt
+            
+            if self.is_draining and debt_manager:
+                debt_manager.accrue_debt(self.drain_rate * dt)
+                self._drain_beam_alpha = min(180, self._drain_beam_alpha + int(dt * 400))
+            else:
+                self._drain_beam_alpha = max(0, self._drain_beam_alpha - int(dt * 300))
+        else:
+            self.is_draining = False
+            self._drain_beam_alpha = max(0, self._drain_beam_alpha - int(dt * 300))
+
+    def render(self, screen: pygame.Surface) -> None:
+        if not self.visible:
+            return
+        rect = self.get_rect()
+        center = self.center
+        
+        if self._drain_beam_alpha > 0 and self.target:
+            beam_surf = pygame.Surface((Settings.SCREEN_WIDTH, Settings.SCREEN_HEIGHT), pygame.SRCALPHA)
+            pygame.draw.line(beam_surf, (*self.color, self._drain_beam_alpha),
+                           (int(center.x), int(center.y)),
+                           (int(self.target.center.x), int(self.target.center.y)), 3)
+            screen.blit(beam_surf, (0, 0))
+        
+        pulse = (math.sin(self._pulse_timer) + 1) / 2
+        if self.is_draining:
+            glow_surf = pygame.Surface((rect.width + 20, rect.height + 20), pygame.SRCALPHA)
+            glow_alpha = int(50 + 60 * pulse)
+            pygame.draw.circle(glow_surf, (*self.color, glow_alpha),
+                             (rect.width//2 + 10, rect.height//2 + 10), rect.width//2 + 8)
+            screen.blit(glow_surf, (rect.x - 10, rect.y - 10))
+        
+        r = self.size[0] // 2
+        hex_points = []
+        for i in range(6):
+            angle = math.pi / 3 * i - math.pi / 6
+            hx = center.x + r * math.cos(angle)
+            hy = center.y + r * math.sin(angle)
+            hex_points.append((int(hx), int(hy)))
+        
+        pygame.draw.polygon(screen, self.color, hex_points)
+        pygame.draw.polygon(screen, (255, 255, 200), hex_points, 2)
+        pygame.draw.circle(screen, (40, 40, 0), (int(center.x), int(center.y)), 7)
+        pygame.draw.circle(screen, self.color, (int(center.x), int(center.y)), 4)
+
+
+class SwarmDrone(BaseEntity):
+    """
+    Tiny, fast drones that spawn in groups. Short-lived but terrifying.
+    """
+    
+    def __init__(self, position: Vector2, target: Optional['Player'] = None,
+                 lifetime: float = None):
+        size = Settings.SWARM_DRONE_SIZE
+        super().__init__(position, size)
+        self.speed = Settings.SWARM_DRONE_SPEED
+        self.target = target
+        
+        self.lifetime = lifetime or Settings.SWARM_DRONE_LIFETIME
+        self._age = 0.0
+        
+        self.color = getattr(COLORS, 'SWARM_DRONE', (255, 100, 150))
+        self.collision_layer = CollisionLayer.ENEMY
+        self.collision_mask = CollisionLayer.PLAYER
+        self.affected_by_time = True
+        
+        self._wobble = 0.0
+        import random as _rng
+        self._wobble_offset = _rng.uniform(0, math.pi * 2)
+
+    def update(self, dt: float) -> None:
+        if dt == 0:
+            return
+        self._age += dt
+        self._wobble += dt * 8
+        
+        if self._age >= self.lifetime:
+            self.destroy()
+            return
+        
+        if self.target and not self.target.is_dead:
+            direction = (self.target.center - self.center)
+            if direction.magnitude() > 5:
+                direction = direction.normalized()
+                perp = Vector2(-direction.y, direction.x)
+                wobble_mag = math.sin(self._wobble + self._wobble_offset) * 40
+                final_dir = direction * self.speed + perp * wobble_mag
+                self.position = self.position + final_dir * dt
+
+    def render(self, screen: pygame.Surface) -> None:
+        if not self.visible or not self.active:
+            return
+        center = self.center
+        life_pct = max(0.01, 1.0 - (self._age / self.lifetime))
+        alpha = int(220 * life_pct)
+        sz = int(self.size[0] * (0.6 + 0.4 * life_pct))
+        
+        surf = pygame.Surface((sz * 2, sz * 2), pygame.SRCALPHA)
+        pygame.draw.circle(surf, (*self.color, alpha), (sz, sz), sz)
+        pygame.draw.circle(surf, (255, 255, 255, alpha // 2), (sz, sz), sz, 1)
+        screen.blit(surf, (int(center.x - sz), int(center.y - sz)))

@@ -13,6 +13,7 @@ Design Philosophy:
 
 from typing import List, Dict, Any, TYPE_CHECKING
 import pygame
+import math
 
 from .base_entity import BaseEntity
 from ..core.settings import Settings, COLORS
@@ -78,12 +79,21 @@ class Player(BaseEntity):
         self._anim_timer = 0.0
         self._pulse_amount = 0.0
         
+        # Trail system for smooth movement visual
+        self._trail: List[Vector2] = []
+        self._trail_timer = 0.0
+        self._trail_max = 8
+        
         # References
         self._event_manager = event_manager or get_event_manager()
         
         # Input buffer for responsive controls
         self._input_buffer: Dict[str, float] = {}
         self._buffer_duration = 0.1
+        
+        # Danger zone state
+        self._in_danger_zone = False
+        self._danger_slow_active = False
     
     def handle_input(self, keys: pygame.key.ScancodeWrapper) -> None:
         """
@@ -209,8 +219,16 @@ class Player(BaseEntity):
         self._update_animation(dt)
     
     def _update_animation(self, dt: float) -> None:
-        """Update animation timers."""
+        """Update animation timers and trail."""
         self._anim_timer += dt
+        
+        # Trail recording
+        self._trail_timer += dt
+        if self._trail_timer >= 0.03 and self.velocity.magnitude() > 10:
+            self._trail_timer = 0.0
+            self._trail.append(self.center.copy())
+            if len(self._trail) > self._trail_max:
+                self._trail.pop(0)
         
         # Pulse when frozen
         if self.is_time_frozen:
@@ -220,7 +238,7 @@ class Player(BaseEntity):
     
     def render(self, screen: pygame.Surface) -> None:
         """
-        Render the player.
+        Render the player with neon glow and trail effects.
         
         Args:
             screen: Surface to render to
@@ -231,36 +249,74 @@ class Player(BaseEntity):
         if self.is_dead:
             return
         
+        # Draw trail first (behind player)
+        if len(self._trail) > 1:
+            for i, pos in enumerate(self._trail):
+                t = i / len(self._trail)
+                alpha = int(60 * t)
+                sz = int(self.size[0] * 0.3 * t)
+                if sz > 0 and alpha > 0:
+                    trail_surf = pygame.Surface((sz * 2, sz * 2), pygame.SRCALPHA)
+                    trail_color = (*self.color[:3], alpha)
+                    pygame.draw.circle(trail_surf, trail_color, (sz, sz), sz)
+                    screen.blit(trail_surf, (int(pos.x - sz), int(pos.y - sz)))
+        
         # Determine color based on state
         if self.is_invulnerable:
-            # Flash during invulnerability
             if int(self._anim_timer * 10) % 2 == 0:
                 color = COLORS.WHITE
             else:
                 color = self.color
         elif self.is_time_frozen:
-            # Glowing effect during freeze
             pulse = abs(self._pulse_amount - 0.5) * 2
             color = (
-                int(COLORS.PLAYER_FROZEN[0] + 50 * pulse),
-                int(COLORS.PLAYER_FROZEN[1] + 30 * pulse),
+                min(255, int(COLORS.PLAYER_FROZEN[0] + 50 * pulse)),
+                min(255, int(COLORS.PLAYER_FROZEN[1] + 30 * pulse)),
                 int(COLORS.PLAYER_FROZEN[2])
+            )
+        elif self._in_danger_zone:
+            # Red tinted in danger zone
+            flash = (math.sin(self._anim_timer * 8) + 1) / 2
+            color = (
+                min(255, self.color[0] + int(80 * flash)),
+                max(0, self.color[1] - int(60 * flash)),
+                max(0, self.color[2] - int(60 * flash))
             )
         else:
             color = self.color
         
-        # Draw player body
         rect = self.get_rect()
-        pygame.draw.rect(screen, color, rect)
-        
-        # Draw facing indicator
         center = self.center
-        indicator_end = center + self.facing * (self.size[0] * 0.6)
+        
+        # Outer glow
+        glow_size = self.size[0] + 12
+        glow_surf = pygame.Surface((glow_size, glow_size), pygame.SRCALPHA)
+        glow_alpha = 35 if not self.is_time_frozen else 60
+        pygame.draw.circle(glow_surf, (*color, glow_alpha),
+                          (glow_size // 2, glow_size // 2), glow_size // 2)
+        screen.blit(glow_surf, (int(center.x - glow_size // 2),
+                                int(center.y - glow_size // 2)))
+        
+        # Draw player body — rounded rect
+        pygame.draw.rect(screen, color, rect, border_radius=6)
+        
+        # Draw facing indicator — glowing line
+        indicator_end = center + self.facing * (self.size[0] * 0.7)
         pygame.draw.line(screen, COLORS.WHITE,
                         center.int_tuple, indicator_end.int_tuple, 3)
         
-        # Draw outline
-        pygame.draw.rect(screen, COLORS.WHITE, rect, 2)
+        # Inner highlight
+        inner = rect.inflate(-8, -8)
+        highlight_color = (
+            min(255, color[0] + 40),
+            min(255, color[1] + 40),
+            min(255, color[2] + 40)
+        )
+        pygame.draw.rect(screen, highlight_color, inner, 2, border_radius=3)
+        
+        # Outline
+        outline_color = COLORS.WHITE if not self._in_danger_zone else (255, 100, 100)
+        pygame.draw.rect(screen, outline_color, rect, 2, border_radius=6)
     
     def die(self) -> None:
         """Handle player death."""

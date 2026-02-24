@@ -120,45 +120,45 @@ python main.py
 
 ```
 temporal_debt/
-├── main.py                 # Entry point
-├── requirements.txt        # Dependencies
-├── README.md               # This file
+├── main.py                                     # Entry point
+├── requirements.txt                            # Dependencies
+├── README.md                                   # This file
 │
 ├── docs/
 │   ├── GAME_DESIGN_DOCUMENT.md
 │   └── TECHNICAL_ARCHITECTURE.md
 |
 └── src/
-    ├── core/              # Core game systems
-    │   ├── game.py        # Main game class
-    │   ├── settings.py    # Configuration
-    │   ├── events.py      # Event system
-    │   └── utils.py       # Utilities
+    ├── core/                                   # Core game systems
+    │   ├── game.py                             # Main game class
+    │   ├── settings.py                         # Configuration
+    │   ├── events.py                           # Event system
+    │   └── utils.py                            # Utilities
     │
-    ├── systems/           # Game mechanics
-    │   ├── time_engine.py       # Time manipulation
-    │   ├── debt_manager.py      # Debt tracking
-    │   ├── echo_system.py       # Temporal echoes
-    │   ├── anchor_system.py     # Time anchors
-    │   ├── collision.py         # Collision detection
-    │   ├── momentum_system.py   # V2.0 Momentum
-    │   ├── resonance_system.py  # V2.0 Time waves
-    │   ├── chrono_clone_system.py  # V2.0 Clones
-    │   └── time_reversal_system.py # V2.0 Rewind
+    ├── systems/                                # Game mechanics
+    │   ├── time_engine.py                      # Time manipulation
+    │   ├── debt_manager.py                     # Debt tracking
+    │   ├── echo_system.py                      # Temporal echoes
+    │   ├── anchor_system.py                    # Time anchors
+    │   ├── collision.py                        # Collision detection
+    │   ├── momentum_system.py                  # V2.0 Momentum
+    │   ├── resonance_system.py                 # V2.0 Time waves
+    │   ├── chrono_clone_system.py              # V2.0 Clones
+    │   └── time_reversal_system.py             # V2.0 Rewind
     │
-    ├── entities/          # Game objects
+    ├── entities/                               # Game objects
     │   ├── player.py
     │   ├── enemies.py
     │   ├── interactables.py
-    │   └── interactables_v2.py  # V2.0 entities
+    │   └── interactables_v2.py                 # V2.0 entities
     │
-    ├── levels/            # Level system
+    ├── levels/                                 # Level system
     │   ├── level_manager.py
     │   ├── level_data.py
-    │   ├── level_data_enhanced.py  # Levels 1-10
+    │   ├── level_data_enhanced.py              # Levels 1-10
     │   └── tile.py
     │
-    └── ui/                # User interface
+    └── ui/                                     # User interface
         ├── hud.py
         ├── menus.py
         └── feedback.py
