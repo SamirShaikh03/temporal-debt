@@ -240,9 +240,9 @@ The debt system mirrors real-world lending:
 - **Spatial Partitioning**: Efficient collision detection
 - **State Machine**: Clean game state management
 
-## 🚀 Future Development Ideas
+## 🚀 Future Development IdeasBorrower
 
-- **Story Mode**: Narrative explaining the Temporal Borrower's origin
+- **Story Mode**: Narrative explaining the Temporal 's origin
 - **Endless Mode**: Procedurally generated rooms with escalating difficulty
 - **Multiplayer**: Shared debt between players
 - **Boss Encounters**: Debt Lords as challenging boss battles
